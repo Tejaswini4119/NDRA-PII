@@ -46,8 +46,9 @@ To stand out from a basic RAG system, NDRA integrates several **advanced compone
 ### ✅ Phase-Based Modular Architecture
 - **Phase 1A**: Document Preprocessing & Semantic Chunking  
 - **Phase 1B**: Contextual Embedding Engineering using Hugging Face Transformers + Chroma
-- **Phase 2**: RAG Pipeline with Clause-Aware Decision Reasoning
-- **Phase 3**: Interactive Query Interface (Streamlit UI + CLI for advanced users)
+- **Phase 2A**: Natural Language Query Understanding & Re-Modelling
+- **Phase 2B**: Query Structuring & Intent Mapping
+- **Phase 3A**: RAG Implementations
 
 ### 🧠 Semantic Understanding Boosts
 - Uses **Transformer-based embeddings** (e.g., Sentence Transformers) instead of static embeddings
