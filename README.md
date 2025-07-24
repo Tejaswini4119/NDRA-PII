@@ -1,5 +1,5 @@
-# Neural Document Research Assistance (NDRA) – HackRx 6.0
-NDRA (Neural Document Research Assistant) is a semantic, transformer-based retrieval and reasoning system designed to extract structured knowledge from large, unstructured textual documents such as insurance policies, legal contracts, and corporate communications. It leverages **Domain-Adapted Embedding Models**, **Contextual Chunking Strategies**, and **Retrieval-Augmented Generation (RAG) Pipelines** to align vague or under-specified user queries with document clauses, enabling high-fidelity question answering and policy decision support.
+# Neuro-Semantic Document Research Assistance (NSDRA) – HackRx 6.0
+NSDRA (Neuro-Semantic Document Research Assistance) is a semantic, transformer-based retrieval and reasoning system designed to extract structured knowledge from large, unstructured textual documents such as insurance policies, legal contracts, and corporate communications. It leverages **Domain-Adapted Embedding Models**, **Contextual Chunking Strategies**, and **Retrieval-Augmented Generation (RAG) Pipelines** to align vague or under-specified user queries with document clauses, enabling high-fidelity question answering and policy decision support.
 
 ---
 
@@ -26,7 +26,7 @@ To build a robust system capable of:
 
 ## System Architecture Overview
 
-NDRA follows a modular, phase-based pipeline divided into four core components:
+NDRA follows a modular, phase-based pipeline for ai-core divided into four major components:
 
 1. **Document Preprocessing and Chunking**
 2. **Embedding Generation and Storage**
