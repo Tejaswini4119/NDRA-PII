@@ -30,7 +30,7 @@ This notebook demonstrates how to:
 ## 🗃️ Step 3: Chroma Server
 
 **We ran a local ChromaDB instance and created a persistent collection named ndr_chunks to store:**
-- *All 457 chunks.*
+- *All 481 chunks.*
 - *Their corresponding vector embeddings.*
 - *Unique IDs (chunk-0, chunk-1, ...).*
 
