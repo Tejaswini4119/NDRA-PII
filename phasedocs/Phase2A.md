@@ -67,3 +67,10 @@
 **Response:**
 
 *Can the vehicle be insured? Based on the context: bike accident last month… still eligible for vehicle insurance. Eligibility may depend on vehicle condition, registration location, and past claims history. Check coverage for accidents, third-party liability, own damage, and add-ons like zero depreciation.*
+
+---
+
+> **Role:** NLP & Query Re-Modelling Engineer  
+
+> **Tools Used:** LangChain, Gemini LLM, prompt templates, jupyter
+
