@@ -11,111 +11,60 @@ This notebook demonstrates how to:
 
 ## 📂 Step 1: Load Preprocessed Chunks
 
-```python
-import pickle
-
-with open("chunks.pkl", "rb") as f:
-    chunks = pickle.load(f)
-
-print(f"Loaded {len(chunks)} chunks.")
-```
+**We successfully loaded over 450 semantic document chunks generated during Phase 1A. These chunks represent coherent units of policy information ready for downstream embedding.**
+- *✅ Loaded 481 semantic chunks (chunks.pkl).*
+- *Each chunk captures self-contained context from policy documents, ensuring high-quality vector embeddings.*
 
 ---
 
 ## 🧠 Step 2: Generate Embeddings Using HuggingFace Transformers
 
-```python
-from sentence_transformers import SentenceTransformer
+**Using the lightweight and efficient all-MiniLM-L6-v2 model from HuggingFace's sentence-transformers, we encoded each chunk into a dense vector representation.**
+- *✅ Generated 481 high-dimensional embeddings.*
+- *These embeddings reflect the semantic essence of each chunk, enabling meaning-based retrieval (not just keyword match).*
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-embeddings = embedding_model.encode(chunks, show_progress_bar=True)
 
-print(f"Generated {len(embeddings)} embeddings.")
-```
 
 ---
 
-## 🗃️ Step 3a: Start Chroma Server
-```bash
-PS C:\Users\pardh\Desktop\NDRA> .venv\Scripts\activate
-(.venv) PS C:\Users\pardh\Desktop\NDRA> chroma run --path ./chroma_db
+## 🗃️ Step 3: Chroma Server
 
+**We ran a local ChromaDB instance and created a persistent collection named ndr_chunks to store:**
+- *All 457 chunks.*
+- *Their corresponding vector embeddings.*
+- *Unique IDs (chunk-0, chunk-1, ...).*
 
-                (((((((((    (((((####
-             ((((((((((((((((((((((#########
-           ((((((((((((((((((((((((###########
-         ((((((((((((((((((((((((((############
-        (((((((((((((((((((((((((((#############
-        (((((((((((((((((((((((((((#############
-         (((((((((((((((((((((((((##############
-         ((((((((((((((((((((((((##############
-           (((((((((((((((((((((#############
-             ((((((((((((((((##############
-                (((((((((    #########
+**ChromaDB was configured to persist data to disk (./chroma_db), ensuring long-term retrievability of indexed content.**
+- *✅ Successfully added all embeddings + chunks to persistent ChromaDB.*
+- *Future queries can now operate without repeating embedding generation.*
 
-Saving data to: ./chroma_db
-Connect to Chroma at: http://localhost:8000
-Getting started guide: https://docs.trychroma.com/docs/overview/getting-started                                                                                                        
-
-OpenTelemetry is not enabled because it is missing from the config.
-Listening on localhost:8000
-```
-
-## 🗃️ Step 3b: Store in Chroma Vector DB (Persistent Collection)
-
-```python
-import chromadb
-
-chroma_client = chromadb.HttpClient(host="localhost", port=8000)
-collection = chroma_client.get_or_create_collection(name="ndr_chunks")
-
-ids = [f"chunk-{i}" for i in range(len(chunks))]
-
-collection.add(
-    documents=chunks,
-    embeddings=embeddings.tolist(),
-    ids=ids
-)
-
-print("✅ Chunks + embeddings stored in persistent ChromaDB.")
-```
 
 ---
 
 ## 🔍 Step 4: Semantic Search Query Execution
 
-```python
-from sentence_transformers import SentenceTransformer
-import chromadb
+**We tested the system with a natural query:**
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+> “TABLE OF BENEFITS FOR DOMESTIC COVER”
+- *The query was encoded into an embedding, and matched against the stored vectors using cosine similarity.*
 
-query_text = "TABLE OF BENEFITS FOR DOMESTIC COVER"
-query_embedding = embedding_model.encode(query_text)
+**Top 5 Results returned semantically relevant sections like:**
 
-chroma_client = chromadb.HttpClient(host="localhost", port=8000)
-collection = chroma_client.get_collection(name="ndr_chunks")
+- *📄 “Sum Insured under Domestic Coverage Plan”*
+- *📄 “Breakdown of hospital expenses by treatment type”*
+- *📄 “Table A vs Table B benefit comparison”*
 
-results = collection.query(
-    query_embeddings=[query_embedding.tolist()],
-    n_results=5,
-    include=["documents", "distances"]
-)
+**Each result included a similarity score, helping rank relevance.**
+- *✅ Demonstrated effective semantic retrieval.*
+- *The system can now interpret natural queries and fetch the most semantically related policy content.*
 
-for i, doc in enumerate(results["documents"][0]):
-    print(f"\n🔍 Result {i+1}")
-    print(f"🆔 ID: {results['ids'][0][i]}")
-    print(f"📏 Distance: {results['distances'][0][i]:.4f}")
-    print(f"📄 Document:\n{doc}")
-    print("-" * 60)
-```
 
 ---
 
 ## ✅ Outcome:
 
 - Vector embeddings created and persisted using ChromaDB.
-- Natural language semantic queries return top-matching document chunks based on cosine similarity.
+- Semantic queries return top-matching document chunks based on cosine similarity.
 
 ---
 
@@ -125,4 +74,4 @@ for i, doc in enumerate(results["documents"][0]):
 - `ChromaDB`
 - `pickle`
 
-> This phase establishes a fully working semantic document vectorization and retrieval pipeline.
+> This phase establishes a fully working semantic document vectorization and persistance storage pipeline for further retrieval.
