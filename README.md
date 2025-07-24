@@ -1,79 +1,183 @@
-# 🧠 NDRA – Neural Document Research Assistant
-
-**NDRA (Neural Document Research Assistant)** is an LLM-powered system designed to process natural language queries and extract decision-critical information from large unstructured documents such as policy files, contracts, and emails.
-
----
-
-## 🚀 HackRx 6.0 – Ideate • Co-create • Impact
-
-**The Next Gen of GenAI Starts Here!**  
-Built as a solution submission for **HackRx 6.0** organized by **Bajaj Finserv Health Limited**.
-
-> *“Ready to Create What's Never Been Coded?”*
-
+# Neural Document Research Assistance (NDRA) – HackRx 6.0
+NDRA (Neural Document Research Assistant) is a semantic, transformer-based retrieval and reasoning system designed to extract structured knowledge from large, unstructured textual documents such as insurance policies, legal contracts, and corporate communications. It leverages **Domain-Adapted Embedding Models**, **Contextual Chunking Strategies**, and **Retrieval-Augmented Generation (RAG) Pipelines** to align vague or under-specified user queries with document clauses, enabling high-fidelity question answering and policy decision support.
 
 ---
 
-## 🎯 Hackathon Objective
-
-The goal is to build a system that can:
-
-- Parse plain-text user queries (e.g., *“46-year-old male, knee surgery in Pune, 3-month-old policy”*)
-- Identify key entities like age, procedure, location, and policy duration
-- Retrieve relevant clauses using semantic understanding (not just keyword matching)
-- Evaluate logic in the document to determine an outcome (e.g., approval or rejection)
-- Return a structured, interpretable JSON response with:
-  - **Decision**
-  - **Payout (if any)**
-  - **Justification with clause references**
+## HackRx 6.0 – Bajaj Finserv Health Limited
+This project was developed for HackRx 6.0, organized by Bajaj Finserv Health Ltd., under the theme “The Next Gen of GenAI.” NDRA addresses the challenge of automating complex document reasoning based on natural language queries from users or claimants.
 
 ---
 
-## 🧩 Core Capabilities
+## Objective
 
-- Multi-format document ingestion: PDFs, DOCX, plain text, and emails
-- Context-aware chunking and vectorization using Transformer models
-- Semantic retrieval using embeddings stored in a vector database (Chroma)
-- Natural language query understanding, including vague/incomplete queries
-- RAG-based decision logic synthesis with full clause traceability
+To build a robust system capable of:
+
+- Understanding vague user queries like:  
+  _“46-year-old male, knee surgery in Pune, 3-month-old policy”_
+- Extracting structured data: age, procedure, gender, location, duration
+- Mapping those fields to relevant policy clauses
+- Evaluating eligibility logic from the document
+- Producing a structured JSON response that includes:
+  - Approval or rejection
+  - Eligible amount (if any)
+  - Clause-level justification for the decision
 
 ---
 
-## 🚀 Our Enhancements
+## System Architecture Overview
 
-To stand out from a basic RAG system, NDRA integrates several **advanced components**:
+NDRA follows a modular, phase-based pipeline divided into four core components:
 
-### ✅ Phase-Based Modular Architecture
-- **Phase 1A**: Document Preprocessing & Semantic Chunking  
-- **Phase 1B**: Contextual Embedding Engineering using Hugging Face Transformers + Chroma
-- **Phase 2A**: Natural Language Query Understanding & Re-Modelling
-- **Phase 2B**: Query Structuring & Intent Mapping
-- **Phase 3A**: RAG Implementations
+1. **Document Preprocessing and Chunking**
+2. **Embedding Generation and Storage**
+3. **Query Understanding and Structuring**
+4. **Retrieval-Augmented Generation (RAG) and Decision Engine**
 
-### 🧠 Semantic Understanding Boosts
-- Uses **Transformer-based embeddings** (e.g., Sentence Transformers) instead of static embeddings
-- Chunking strategy ensures **semantic boundary preservation**, improving retrieval quality
+---
 
-### 🔍 Clause Traceability
-- Output includes **clause-to-decision mapping**  
-- Every answer is backed by actual document excerpts, aiding **auditability and transparency**
+## AI Core – Semantic Pipeline
 
-### 🔄 Robust Query Handling
-- Supports **vague or incomplete inputs** using entity extraction and query normalization
-- Designed to work on **real-world, noisy documents**
+### Role: Semantic & RAG Pipeline Engineer
 
-### 📊 Output Format (JSON)
-```json
-{
-  "decision": "Approved",
-  "amount": "₹50,000",
-  "justification": {
-    "matched_clauses": [
-      {
-        "text": "Knee surgeries are covered after a 90-day waiting period...",
-        "location": "Page 4, Clause 7.2"
-      }
-    ],
-    "reasoning": "Query indicates a 3-month policy; clause confirms eligibility."
-  }
-}
+This module powers the brain of NDRA, enabling contextual matching and semantic interpretation of queries and document content.
+
+- Transformer-based chunking with semantic boundary awareness
+- Embedding generation using `sentence-transformers` (e.g., all-MiniLM-L6-v2)
+- Chroma vector store for persistent semantic retrieval
+- LangChain-based RAG pipeline for context retrieval
+- LLM (Gemini) for synthesizing final decision + justification
+- Clause traceability ensured via mapping top-K chunks to source metadata
+
+**Enhancements:**
+
+- Query Understanding and Intent Mapping
+- Document Ingestion and Preprocessing
+- Semantic-aware chunking improves retrieval precision
+- Context window optimization for LLM input (RAG prompt design)
+- Handles vague/incomplete queries with structured fallback logic
+
+
+## Backend – FastAPI Service Layer
+
+### Role 1: Backend Dev
+- Developed ingestion pipeline in FastAPI.
+- Handled file parsing logic for PDF, DOCX, and email formats.
+- Connected parsed output to AI chunking and embedding modules.
+- Integrated Chroma vector store endpoints with FastAPI.
+- Maintains modular pipeline routing for document preprocessing.
+
+### Role 2: API Dev
+- Built user-facing endpoints for:
+  - Document upload
+  - Query submission
+  - Final JSON output retrieval
+- Implemented structured logging, validation, and error handling.
+- Connected API endpoints to internal semantic pipeline and LLM decision modules.
+
+**Enhancements:**
+- Multi-domain policy support (Health, Motor, etc.)
+- Robust fallback for missing fields and vague queries.
+- Entity extraction and dynamic field structuring into JSON.
+- Rate-limiting and async task queuing (if time permits).
+
+
+## Frontend – Streamlit-based Web UI
+
+### Role: UI Developer 
+
+- Streamlit-based responsive UI for easy interaction
+- Allows document upload and query submission
+- Displays structured JSON response with:
+  - Final decision (approve/reject)
+  - Eligible amount (if any)
+  - Clause reference text and location
+- Ideal for demo/testing, supports real-time inference
+
+**Enhancements:**
+
+- Clear layout with status updates and chunk-level visibility
+- Supports CLI fallback for advanced users
+
+---
+
+### Technology Stack
+- Frontend: Streamlit (Python)
+- Backend: Node.js (Fastify), Python microservices (via Flask/FastAPI for AI tasks)
+- AI: HuggingFace Transformers, Gemini APIs, ChromaDB, Langchain
+- Storage: Chroma Vector Store, Pickle for chunk storage
+
+
+---
+
+## Project Structure
+
+### AI / Semantic Core Engineering (Handled by Member 2)
+Everything from Phase 1A to 3B is covered under Semantic & RAG Pipeline Engineering.
+
+#### ✅ Phase 1A – Preprocessing & Chunking
+- Cleaned raw documents (PDF, DOCX, Emails).
+- Removed noise like headers, footers, signatures.
+- Applied semantic-aware chunking pipeline.
+- Output stored as `chunks.pkl`.
+
+#### ✅ Phase 1B – Embedding & Vector Store
+- Used HuggingFace model (`all-MiniLM-L6-v2`) for contextual vectorization.
+- Stored embeddings in Chroma Vector Database.
+- Enabled semantic search with vector indexing.
+
+#### ✅ Phase 2A – Query Understanding
+- Parsed user queries using LLM (e.g., Gemini Pro).
+- Domain detection: Health, Motor, etc.
+- Rewritten for structured understanding and improved answerability.
+
+#### ✅ Phase 2B – Intent Mapping
+- Mapped query to structured JSON:
+  - Fields like age, gender, location, procedure, policy duration.
+- Tagged missing/ambiguous values for LLM-based fill.
+- Matched queries with document types.
+
+#### 🔄 Phase 3A – Contextual Response Synthesis (RAG-P1)
+- Retrieved top-k relevant chunks via semantic search.
+- Combined chunks + structured query.
+- Prompted LLM to synthesize answer with citation traces.
+
+#### 🔄 Phase 3B – Decision Logic & Output Structuring (RAG-P2)
+- Extended RAG to include:
+  - Conflict detection
+  - Missing field detection
+  - Edge case fallback logic
+- Final output generated as:
+  - Structured JSON
+  - Natural language explanation
+
+---
+
+### Backend Engineering (Handled by Member 3 & Member 4)
+
+- API endpoints for:
+  - Document upload & ingestion
+  - User query processing
+  - LLM-based semantic routing
+  - Final JSON output delivery
+- Manages communication with AI module.
+- Error handling & Modular Pipeline Routing.
+
+---
+
+### Frontend (Streamlit Interface) (Handled by Member 1)
+
+- Upload policy documents (PDF, DOCX, Email).
+- Input vague or natural language queries.
+- Display final structured output:
+  - Approved/Rejected
+  - Amount covered
+  - Cited clause justification
+- Fast, minimal UI for demo and hackathon judging.
+
+---
+
+> *“Information isn’t knowledge until it’s interpretable. NDRA bridges that gap using AI.”*
+
+
+
+
