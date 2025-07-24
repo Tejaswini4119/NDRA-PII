@@ -1,6 +1,6 @@
 # Phase 2A: Natural Language Query Understanding & Re-Modelling
 
-## ✅ Phase 2A Goals Achieved
+## ✅ 2A Goals Achieved
 
 | Task | Status |
 |------|--------|
