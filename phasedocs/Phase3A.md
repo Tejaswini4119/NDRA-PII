@@ -1,10 +1,10 @@
-# NDRA | Phase 3A: Semantic RAG Engineering and Pipeline Implementation
+# Phase 3A: Semantic RAG Engineering and Pipeline Implementation
 
-🧠 **Project**: Natural Document Reasoning Assistant (NDRA)  
+**Project**: Neuro-Semantic Document Research Assistant (NDRA)  
 **Phase**: 3A  
 **Goal**: Retrieve policy clauses using ChromaDB and generate context-aware answers via Gemini Pro (RAG inference)  
-**Run Date**: July 25, 2025  
-**Author**: [Your Name]
+**Run Date**: July 25th, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
 
@@ -18,7 +18,7 @@ Implement an end-to-end Retrieval-Augmented Generation (RAG) pipeline to extract
 
 ---
 
-## 🧰 Tools and Stack Used — Phase 3A: Semantic RAG Engineering and Pipeline Implementation
+## Tools and Stack Used 
 
 ### 🧠 Embeddings & Semantic Search
 
@@ -139,7 +139,7 @@ Insurance policy coverage for had knee surgery, Policy coverage. Check hospitali
 
 ---
 
-## 📥 Top Matched Clauses (ChromaDB)
+## 📥 Top Matched Clauses (ChromaDB Server)
 
 1. **Clause on Day Care Procedures**:  
    *"We will pay You the medical expenses as listed under Section C, Part B, I-1 - In-patient Hospitalization Treatment for Day Care Procedures / Surgeries..."*

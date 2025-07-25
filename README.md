@@ -180,6 +180,6 @@ Everything from Phase 1A to 3B is covered under Semantic & RAG Pipeline Engineer
 
 > *“Information isn’t knowledge until it’s interpretable. NDRA bridges that gap using AI.”*
 
-
+-Team NDRA
 
 

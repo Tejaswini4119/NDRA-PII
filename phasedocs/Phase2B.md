@@ -1,13 +1,16 @@
-
 # Phase 2B: Query Structuring & Intent Mapping
 
-## ✅ Goal:
-Convert a user's vague natural language query into a structured format that includes:
-- A classified **intent**
-- Extracted **entities**
-- A **rewritten query** with enhanced clarity and context
-- A structured JSON-like **query object**
-- An optional **completeness score**
+**Project**: Neuro-Semantic Document Research Assistant (NDRA)  
+**Phase**: 2B  
+**Goal**: Convert a user's vague natural language query into a structured format that includes:
+  - A classified **intent**
+  - Extracted **entities**
+  - A **rewritten query** with enhanced clarity and context
+  - A structured JSON-like **query object**
+  - An **completeness score**
+
+**Run Date**: July 24th, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
 
