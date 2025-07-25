@@ -3,7 +3,7 @@
 **Project**: Neuro-Semantic Document Research Assistant (NDRA)  
 **Phase**: 3A  
 **Goal**: Retrieve policy clauses using ChromaDB and generate context-aware answers via Gemini Pro (RAG inference)  
-**Run Date**: July 25, 2025  
+**Run Date**: July 25th, 2025  
 **Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
