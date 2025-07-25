@@ -4,6 +4,14 @@
 
 ---
 
+**Project**: Neuro-Semantic Document Research Assistant (NDRA)  
+**Phase**: 3A    
+**Run Date**: July 23, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
+
+
+---
+
 ## 🧩 Step 1: Dependency Setup
 
 **Tools & Libraries Used (conceptually):**
