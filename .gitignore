@@ -1,0 +1,7 @@
+.ndravenv/
+.zencoder
+.ipynb_checkpoints/
+.gitignore
+.env
+doc/
+__pycache__
