@@ -1,4 +1,11 @@
 # Phase 2A: Natural Language Query Understanding & Re-Modelling
+---
+**Project**: Neuro-Semantic Document Research Assistant (NDRA)  
+**Phase**: 2A  
+**Run Date**: July 23, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
+
+---
 
 ## ✅ 2A Goals Achieved
 
