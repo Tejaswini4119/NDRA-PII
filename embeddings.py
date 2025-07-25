@@ -25,13 +25,20 @@ print(f"Generated {len(embeddings)} embeddings.")
 chroma_client = chromadb.HttpClient(host="localhost", port=8000)
 collection = chroma_client.get_or_create_collection(name="ndr_chunks")
 
+# If chunks.pkl is a list of plain strings (without metadata), use a fallback
+# Otherwise, if you have per-chunk metadata (like [chunk_text, source]), use that.
+
+# If you didn't yet modify Phase 1A to embed metadata, fallback source:
+default_source = "multiple_docs"
+
 ids = [f"chunk-{i}" for i in range(len(chunks))]
+metadatas = [{"source": default_source} for _ in chunks]
 
 collection.add(
     documents=chunks,
     embeddings=embeddings,
     ids=ids,
-    metadatas=[{"source": "BAJHLIP23020V012223.pdf"}] * len(chunks)
+    metadatas=metadatas,
 )
 
 print("✅ Chunks + embeddings stored in persistent ChromaDB.")

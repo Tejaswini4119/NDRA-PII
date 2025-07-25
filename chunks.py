@@ -5,6 +5,7 @@
 
 from pypdf import PdfReader
 from docx import Document
+import glob
 import os
 import pickle
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -37,16 +38,25 @@ def chunk_text(text: str, chunk_size=500, overlap=100):
     return splitter.split_text(text)
 
 if __name__ == "__main__":
-    file_path = "doc/BAJHLIP23020V012223.pdf"  # TODO: Replace with actual path or loop for multi-doc
-    raw_text = load_file(file_path)
-    chunks = chunk_text(raw_text)
+    doc_dir = "doc/"
+    pdf_files = glob.glob(os.path.join(doc_dir, "*.pdf"))
 
-    for i, chunk in enumerate(chunks[:5]):
+    all_chunks = []
+
+    for file_path in pdf_files:
+        print(f"📄 Loading: {file_path}")
+        raw_text = load_file(file_path)
+        chunks = chunk_text(raw_text)
+        all_chunks.extend(chunks)
+
+    # Preview first 5 chunks
+    for i, chunk in enumerate(all_chunks[:5]):
         print(f"Chunk {i+1}:\n{chunk}\n{'-'*80}")
 
-    print(f"Total Chunks: {len(chunks)}")
+    print(f"Total Chunks: {len(all_chunks)}")
 
+    # Save all chunks to a pickle file
     with open("chunks.pkl", "wb") as f:
-        pickle.dump(chunks, f)
+        pickle.dump(all_chunks, f)
 
     print("✅ Saved chunks as chunks.pkl")
