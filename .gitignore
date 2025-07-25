@@ -1,8 +1,0 @@
-.ndravenv/
-.zencoder
-.ipynb_checkpoints/
-.gitignore
-.env
-doc/
-__pycache__
-bfg-1.15.0.jar
