@@ -2,7 +2,7 @@
 ---
 **Project**: Neuro-Semantic Document Research Assistant (NDRA)  
 **Phase**: 2A  
-**Run Date**: July 23, 2025  
+**Run Date**: July 24th, 2025  
 **Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
