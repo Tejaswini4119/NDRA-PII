@@ -139,7 +139,7 @@ Insurance policy coverage for had knee surgery, Policy coverage. Check hospitali
 
 ---
 
-## 📥 Top Matched Clauses (ChromaDB)
+## 📥 Top Matched Clauses (ChromaDB Server)
 
 1. **Clause on Day Care Procedures**:  
    *"We will pay You the medical expenses as listed under Section C, Part B, I-1 - In-patient Hospitalization Treatment for Day Care Procedures / Surgeries..."*
