@@ -1,10 +1,10 @@
-# NDRA | Phase 3A: Semantic RAG Engineering and Pipeline Implementation
+# Phase 3A: Semantic RAG Engineering and Pipeline Implementation
 
-🧠 **Project**: Natural Document Reasoning Assistant (NDRA)  
+**Project**: Neuro-Semantic Document Reasoning Assistant (NDRA)  
 **Phase**: 3A  
 **Goal**: Retrieve policy clauses using ChromaDB and generate context-aware answers via Gemini Pro (RAG inference)  
 **Run Date**: July 25, 2025  
-**Author**: [Your Name]
+**Author**: [Pardhu Varma](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
 
