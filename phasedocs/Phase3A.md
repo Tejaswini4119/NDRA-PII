@@ -4,7 +4,7 @@
 **Phase**: 3A  
 **Goal**: Retrieve policy clauses using ChromaDB and generate context-aware answers via Gemini Pro (RAG inference)  
 **Run Date**: July 25, 2025  
-**Author**: [Pardhu Varma](https://github.com/PardhuSreeRushiVarma20060119/)
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
 
 ---
 
@@ -18,7 +18,7 @@ Implement an end-to-end Retrieval-Augmented Generation (RAG) pipeline to extract
 
 ---
 
-## 🧰 Tools and Stack Used — Phase 3A: Semantic RAG Engineering and Pipeline Implementation
+## Tools and Stack Used 
 
 ### 🧠 Embeddings & Semantic Search
 
