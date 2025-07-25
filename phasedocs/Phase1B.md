@@ -1,4 +1,12 @@
 # Phase 1B: Contextual Vectorization & Embedding using HF Transformer Inference and Persistent Indexing via Chroma Vector DB with Semantic Search Query Implementation.
+---
+
+**Project**: Neuro-Semantic Document Reasoning Assistant (NDRA)  
+**Phase**: 1B    
+**Run Date**: July 23, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
+
+---
 
 This notebook demonstrates how to:
 
