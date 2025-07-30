@@ -189,7 +189,7 @@ Based on the provided clauses, knee surgery is covered. The coverage is subject 
 | LLM Inference    | 14.8997        |
 | Total Runtime    | 23.5588        |
 
-> ⚠️ Note: The total runtime includes both vector search latency and LLM inference time. Optimizing vector index size and embedding model could reduce latency further, This Will Be Further Implemented In **Phase-3B** For Speed Optimization.
+> ⚠️ Note: The total runtime includes both vector search latency and LLM inference time. Optimizing vector index size and embedding model could reduce latency further, This Will Be in Further Implementations For Speed Optimization.
 
 ---
 
