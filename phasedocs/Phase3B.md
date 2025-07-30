@@ -1,10 +1,16 @@
-## Phase 3B : Semantic RAG Synthesis & Speed Optimization.
+# Phase 3B : Semantic RAG Synthesis & Speed Optimization.
+
+**Project**: Neuro-Semantic Document Research Assistant (NDRA)  
+**Phase**: 3B  
+**Goal**: Accurate, explainable, structured decision-making for vague insurance queries using semantic search + LLM synthesis — all within **<7 seconds**.
+**Run Date**: July 30th, 2025  
+**Author**: [@PardhuSreeRushiVarma20060119](https://github.com/PardhuSreeRushiVarma20060119/)
+
+
+---
 
 ## Overview
-
-Phase 3 focused on converting semantically processed policy chunks into intelligent responses to vague human queries. The pipeline integrates **prompt-based RAG**, **LLM-driven clause synthesis**, **structured JSON generation**, and **speed failovers**.
-
-> 🎯 **Goal**: Accurate, explainable, structured decision-making for vague insurance queries using semantic search + LLM synthesis — all within **<7 seconds**.
+*Phase 3 focused on converting semantically processed policy chunks into intelligent responses to vague human queries. The pipeline integrates **prompt-based RAG**, **LLM-driven clause synthesis**, **structured JSON generation**, and **speed failovers**.**
 
 ---
 
