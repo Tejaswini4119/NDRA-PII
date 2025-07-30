@@ -1,4 +1,4 @@
-## Phase 3 : Semantic RAG Engineering & Speed Optimization.
+## Phase 3B : Semantic RAG Synthesis & Speed Optimization.
 
 ## Overview
 
