@@ -1,46 +1,50 @@
 import os
 import re
+import json
 from typing import Dict
 from dotenv import load_dotenv
-
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnableSequence
-from langchain_google_genai import ChatGoogleGenerativeAI
+from fastllm import fast_chat  # ✅ Make sure fastllm.py is created as discussed
 
 # === Load environment ===
 load_dotenv()
 
-# === Prompt Template ===
-extract_prompt = PromptTemplate(
-    input_variables=["query"],
-    template="""
-You are an intelligent query parser for insurance-related requests.
+# === Prompt Template for Query Info Extraction ===
+def build_extraction_prompt(query: str) -> str:
+    return f"""
+You are an intelligent insurance query parser.
 
 Given this user query:
 "{query}"
 
-Extract and return a structured JSON object with the following fields if they appear:
+Extract a valid JSON object with these fields:
 - age
 - gender
-- procedure (surgery or treatment)
+- procedure
 - location
-- policy_duration (e.g., how old the policy is, like "3 months")
-- subject (general topic of the query if not person-specific)
+- policy_duration
+- subject
+If a field is missing, set it as null.
+Return only a JSON, no explanation.
+"""
 
-Return a valid JSON. If any field is missing or irrelevant, set it as null.
-""",
-)
+# === Parse JSON safely ===
+def safe_json_parse(text: str) -> Dict:
+    try:
+        return json.loads(text)
+    except Exception:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except Exception:
+                return {"error": "Invalid JSON in output"}
+        return {"error": "Failed to extract JSON"}
 
-# === Google Gemini Model ===
-gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro",
-    temperature=0,
-    google_api_key=os.getenv("GOOGLE_API_KEY")
-)
-
-parser = JsonOutputParser()
-gemini_chain: RunnableSequence = extract_prompt | gemini | parser
+# === Use Fast LLM (Phi 3.5) to extract info ===
+def extract_query_info_llm(query: str) -> Dict:
+    prompt = build_extraction_prompt(query)
+    response = fast_chat(prompt)
+    return safe_json_parse(response)
 
 # === Domain Detection ===
 def detect_domain(info: Dict, query: str) -> str:
@@ -92,14 +96,7 @@ def get_coverage_hints(domain: str) -> str:
     }
     return hints.get(domain, hints["general"])
 
-# === Use Gemini to extract query info ===
-def extract_query_info_llm(query: str) -> Dict:
-    try:
-        return gemini_chain.invoke({"query": query})
-    except Exception as e:
-        return {"error": "Gemini failed", "gemini_error": str(e)}
-
-# === Rewrite query for downstream tasks ===
+# === Rewrite query based on info ===
 def rewrite_query(info: Dict, query: str) -> str:
     if "error" in info:
         return "Unable to process query."

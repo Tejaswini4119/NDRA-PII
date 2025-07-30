@@ -24,6 +24,7 @@ print(f"Generated {len(embeddings)} embeddings.")
 # Step 3: Store in ChromaDB
 chroma_client = chromadb.HttpClient(host="localhost", port=8000)
 collection = chroma_client.get_or_create_collection(name="ndr_chunks")
+## collection.delete(ids=[f"chunk-{i}" for i in range(len(chunks))])  # Clear existing data
 
 # If chunks.pkl is a list of plain strings (without metadata), use a fallback
 # Otherwise, if you have per-chunk metadata (like [chunk_text, source]), use that.

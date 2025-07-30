@@ -1,51 +1,80 @@
 # ragqexec.py
-# NDRA | Phase 3A : Contextual Response Synthesis (Clause Retrieval & RAG Prompting)
+# NDRA | Phase 3B : Fast RAG Pipeline (<4s) + fastllm Primary + Gemini Fallback
 
 import os
 import time
+import re
 import chromadb
+from dotenv import load_dotenv
+from pprint import pprint
+from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor
 from langchain_huggingface import HuggingFaceEmbeddings
+
 from querygenai import extract_query_info_llm, rewrite_query
 from strqgen import build_structured_query, compute_completeness_score
-from chromadb import Client
-from chromadb.config import Settings
-import google.generativeai as genai  # ✅ fixed alias
-from dotenv import load_dotenv
 
-# --- Environment Setup ---
+import google.generativeai as genai
+from fastllm import fast_chat  # ✅ Fast Local/API LLM
+
+# --- Load Environment Variables ---
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise ValueError("❌ GEMINI_API_KEY not found in .env file")
-genai.configure(api_key=api_key)
 
-# 🔹 Initialize HuggingFace Embeddings (same model used during indexing)
+# --- Gemini Setup (Fallback) ---
+genai_key = os.getenv("GOOGLE_API_KEY")
+if genai_key:
+    genai.configure(api_key=genai_key)
+
+# --- Embedding Setup ---
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 embed_func = embedding_model.embed_query
 
-# 🔹 Connect to local persistent Chroma DB
+# --- Chroma DB Setup ---
 chroma_client = chromadb.HttpClient(host="localhost", port=8000)
 collection = chroma_client.get_or_create_collection(name="ndr_chunks")
 print("Chroma Collection Count:", collection.count())
 
+# --- Wrap LLM Response into JSON Format ---
+def wrap_llm_response_to_json(llm_output: str) -> dict:
+    try:
+        answer_match = re.search(r"\*\*1\..*?\*\*\s*(Yes|No|Maybe|Depends)", llm_output, re.IGNORECASE)
+        justification_match = re.search(r"\*\*2\..*?\*\*\s*(.*?)(?=\n\s*\*\*3|\Z)", llm_output, re.IGNORECASE | re.DOTALL)
+        return {
+            "answer": answer_match.group(1).strip() if answer_match else "Unknown",
+            "justification": justification_match.group(1).strip() if justification_match else llm_output.strip()
+        }
+    except Exception as e:
+        return {
+            "answer": "Unknown",
+            "justification": f"Parsing failed: {str(e)}"
+        }
 
-def semantic_search(query: str, top_k=5):
-    """
-    Perform semantic search on Chroma DB to retrieve top-k relevant clauses.
-    """
+# --- Support Clause Tracing ---
+def trace_supporting_clauses(justification: str, clauses: list[str], top_k: int = 3):
+    scored = [(i, SequenceMatcher(None, justification.lower(), clause.lower()).ratio()) for i, clause in enumerate(clauses)]
+    top_indices = sorted(scored, key=lambda x: x[1], reverse=True)[:top_k]
+    return [clauses[i] for i, _ in top_indices]
+
+# --- Semantic Search with Trim in Parallel ---
+def semantic_search_parallel(query: str, top_k=5):
     query_vec = embed_func(query)
     results = collection.query(query_embeddings=[query_vec], n_results=top_k)
-    return results["documents"][0], results["metadatas"][0]
+    raw_chunks = results["documents"][0]
+    metadatas = results["metadatas"][0]
 
+    def clean(c): return " ".join(c.strip().split())[:400]
+    with ThreadPoolExecutor() as executor:
+        trimmed_chunks = list(executor.map(clean, raw_chunks))
 
-def rag_prompt(rewritten_query: str, chunks: list[str], structured_info: dict) -> str:
-    """
-    Generate a context-aware prompt for the LLM using relevant document clauses and query metadata.
-    """
-    prompt = f"""
+    return trimmed_chunks, metadatas
+
+# --- RAG Prompt Builder ---
+def rag_prompt(rewritten_query: str, clauses: list[str], structured_info: dict) -> str:
+    return f"""
 You are an Advanced Policy Document Assistant.
 
 A user asked: "{structured_info['original_query']}"
+Rewritten query (for clarity): "{rewritten_query}"
 
 Structured query details:
 - Intent: {structured_info['intent']}
@@ -57,51 +86,59 @@ Structured query details:
 - Policy Duration: {structured_info.get('policy_duration')}
 
 Relevant clauses:
-{chr(10).join(f"- {clause.strip()}" for clause in chunks)}
+{chr(10).join(f"- {clause.strip()}" for clause in clauses)}
 
-Based on the above, you must provide:
-1. A clear YES/NO answer (if applicable)
-2. Explanation referencing the clause
-3. Final decision
+Instructions:
+1. If the clauses mention surgeries in general (e.g., "in-patient surgeries", "orthopedic procedures"), and the user procedure fits within that category (e.g., knee surgery), consider it as covered unless excluded.
+2. If multiple clauses apply, combine reasoning.
+3. If unsure, explain what’s missing.
 
-Return only final answer with short justification.
-"""
-    return prompt.strip()
+⚠️ If a clause **indirectly implies** a category (orthopedic, musculoskeletal, joint surgeries), assume it's relevant — even if not stated as "knee surgery".
 
+Answer clearly:
+1. YES/NO
+2. Explanation referencing clauses
+3. Final conclusion
+""".strip()
 
+# --- Main LLM Inference Handler ---
 def generate_llm_response(prompt: str) -> str:
-    """
-    Generate an LLM response using Gemini Pro model.
-    """
-    model = genai.GenerativeModel("gemini-2.5-pro")
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    try:
+        # ✅ FastLLM Primary
+        return fast_chat(prompt)
+    except Exception as fast_error:
+        print(f"⚠️ Fast LLM failed, falling back to Gemini: {fast_error}")
+        try:
+            model = genai.GenerativeModel("gemini-2.5-flash-lite")
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as gemini_error:
+            return f"❌ Both LLMs failed. Gemini error: {str(gemini_error)}"
 
-
+# --- Full Pipeline ---
 def run_rag_pipeline(user_query: str):
     overall_start = time.time()
-    """
-    End-to-end RAG pipeline: 
-    → extract intent and fields 
-    → rewrite and structure query 
-    → retrieve relevant clauses 
-    → generate contextual response.
-    """
+
+    # Extract and transform query
     info = extract_query_info_llm(user_query)
     rewritten = rewrite_query(info, user_query)
     structured = build_structured_query(info, rewritten, user_query)
     completeness = compute_completeness_score(structured)
 
-    print("🔍 Semantic Search Initiated...")
+    # Semantic search
     search_start = time.time()
-    top_chunks, metadata = semantic_search(rewritten)
+    top_chunks, metadata = semantic_search_parallel(rewritten)
     search_end = time.time()
 
-    print("🧠 Prompting LLM with context...")
+    # RAG inference
     llm_start = time.time()
     prompt = rag_prompt(rewritten, top_chunks, structured)
     llm_response = generate_llm_response(prompt)
     llm_end = time.time()
+
+    # Parse & explain
+    answer_data = wrap_llm_response_to_json(llm_response)
+    answer_data["supporting_clauses"] = trace_supporting_clauses(answer_data["justification"], top_chunks)
 
     overall_end = time.time()
 
@@ -110,7 +147,8 @@ def run_rag_pipeline(user_query: str):
         "rewritten_query": rewritten,
         "intent": structured["intent"],
         "matched_clauses": top_chunks,
-        "answer": llm_response,
+        "answer_structured": answer_data,
+        "raw_answer": llm_response,
         "completeness_score": completeness,
         "metadata": metadata,
         "timing": {
@@ -120,54 +158,29 @@ def run_rag_pipeline(user_query: str):
         }
     }
 
-
-# 🔹 Optional CLI test
+# --- CLI ---
 if __name__ == "__main__":
     query = "Does this policy cover knee surgery, and what are the conditions?"
     result = run_rag_pipeline(query)
 
     print("\n🧾 Final Output:")
     for key, val in result.items():
-        print(f"{key.upper()}:\n{val}\n")
-
+        print(f"{key.upper()}:")
+        if isinstance(val, dict):
+            pprint(val)
+        elif isinstance(val, list):
+            for i, v in enumerate(val):
+                if isinstance(v, str):
+                    print(f"  [{i+1}] {v.strip()[:300]}...\n")
+                elif isinstance(v, dict):
+                    print(f"  [{i+1}] Source: {v.get('source', 'N/A')}\n")
+                else:
+                    print(f"  [{i+1}] [Unsupported metadata format]\n")
+        else:
+            print(val)
+        print()
 
     print("📊 Time Breakdown:")
     print("🔎 Vector Search: {}s".format(result["timing"]["semantic_search"]))
     print("🧠 LLM Inference: {}s".format(result["timing"]["llm_inference"]))
     print("⏱️ Total: {}s".format(result["timing"]["total"]))
-
-
-## test code (remove later)
-
-import chromadb
-from sentence_transformers import SentenceTransformer
-
-# Connect to ChromaDB HTTP server
-chroma_client = chromadb.HttpClient(host="localhost", port=8000)
-collection = chroma_client.get_or_create_collection(name="ndr_chunks")
-
-# Use sentence-transformers to embed the query
-model = SentenceTransformer("all-MiniLM-L6-v2")
-query = "Does this policy cover knee surgery, and what are the conditions?"
-query_embedding = model.encode(query).tolist()
-
-# Perform similarity search using query embedding
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=5,
-    include=["documents", "distances"],
-)
-
-# Display results
-documents = results.get("documents", [[]])[0]
-distances = results.get("distances", [[]])[0]
-
-print(f"🔎 Total results found: {len(documents)}")
-
-if not documents:
-    print("⚠️ No relevant chunks were found for your query.")
-else:
-    for i, (doc, dist) in enumerate(zip(documents, distances)):
-        print(f"\n--- Match {i+1} (similarity score: {1 - dist:.4f}) ---")  # Higher is better
-        print(doc[:500])
-
