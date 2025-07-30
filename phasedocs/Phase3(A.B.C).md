@@ -1,7 +1,4 @@
-# Phase 3 Report: NDRA RAG Engine 
-## RAG-Oriented Query Execution with Structured Output & Speed Optimization
-
----
+## Phase 3 : Semantic RAG Engineering & Speed Optimization.
 
 ## Overview
 
