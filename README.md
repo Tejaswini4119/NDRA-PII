@@ -138,12 +138,12 @@ Everything from Phase 1A to 3B is covered under Semantic & RAG Pipeline Engineer
 - Tagged missing/ambiguous values for LLM-based fill.
 - Matched queries with document types.
 
-#### 🔄 Phase 3A – Contextual Response Synthesis (RAG-P1)
+#### ✅ Phase 3A – Contextual Response Synthesis (RAG-P1)
 - Retrieved top-k relevant chunks via semantic search.
 - Combined chunks + structured query.
 - Prompted LLM to synthesize answer with citation traces.
 
-#### 🔄 Phase 3B – Decision Logic & Output Structuring (RAG-P2)
+#### ✅ Phase 3B – Decision Logic & Output Structuring (RAG-P2)
 - Extended RAG to include:
   - Conflict detection
   - Missing field detection
@@ -151,6 +151,13 @@ Everything from Phase 1A to 3B is covered under Semantic & RAG Pipeline Engineer
 - Final output generated as:
   - Structured JSON
   - Natural language explanation
+
+#### ✅ Phase 3C – Speed Optimisation
+- Speed Up The Response Time Period <8s
+  - Parllell Processing
+  - FastLLM via OpenRouter
+  - Failsafe Gemini Fallback
+  - Optimisations
 
 ---
 
