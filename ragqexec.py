@@ -37,17 +37,40 @@ print("Chroma Collection Count:", collection.count())
 # --- Wrap LLM Response into JSON Format ---
 def wrap_llm_response_to_json(llm_output: str) -> dict:
     try:
-        answer_match = re.search(r"\*\*1\..*?\*\*\s*(Yes|No|Maybe|Depends)", llm_output, re.IGNORECASE)
+        # Try multiple patterns to match "Yes" or "No"
+        patterns = [
+            r"\*\*1\..*?\*\*\s*(Yes|No)",         # Original format: **1.** Yes
+            r"^1\.\s*(Yes|No)",                   # Loose numbered format: 1. Yes
+            r"^Answer:\s*(Yes|No)",               # Answer: Yes
+            r"^\s*(Yes|No)\b"                     # Just a line starting with Yes/No
+        ]
+
+        answer = None
+        for pattern in patterns:
+            match = re.search(pattern, llm_output, re.IGNORECASE | re.MULTILINE)
+            if match:
+                answer = match.group(1).strip().capitalize()
+                break
+
+        # If still nothing, fallback to default
+        if not answer:
+            answer = "No"  # or "Unknown" if you want to be conservative
+
+        # Justification block
         justification_match = re.search(r"\*\*2\..*?\*\*\s*(.*?)(?=\n\s*\*\*3|\Z)", llm_output, re.IGNORECASE | re.DOTALL)
+        justification = justification_match.group(1).strip() if justification_match else llm_output.strip()
+
         return {
-            "answer": answer_match.group(1).strip() if answer_match else "Unknown",
-            "justification": justification_match.group(1).strip() if justification_match else llm_output.strip()
+            "answer": answer,
+            "justification": justification
         }
+
     except Exception as e:
         return {
-            "answer": "Unknown",
+            "answer": "No",
             "justification": f"Parsing failed: {str(e)}"
         }
+
 
 # --- Support Clause Tracing ---
 def trace_supporting_clauses(justification: str, clauses: list[str], top_k: int = 3):
@@ -149,7 +172,6 @@ def run_rag_pipeline(user_query: str):
         "matched_clauses": top_chunks,
         "answer_structured": answer_data,
         "raw_answer": llm_response,
-        "completeness_score": completeness,
         "metadata": metadata,
         "timing": {
             "semantic_search": round(search_end - search_start, 4),
@@ -157,30 +179,49 @@ def run_rag_pipeline(user_query: str):
             "total": round(overall_end - overall_start, 4)
         }
     }
+# --- Backend Model Wrapper ---
+from backend.models import QueryResponse
 
-# --- CLI ---
-if __name__ == "__main__":
-    query = "Does this policy cover brain surgery, and what are the conditions? and policies?"
+def run_pipeline(query: str, metadata: dict = None) -> QueryResponse:
     result = run_rag_pipeline(query)
 
-    print("\n🧾 Final Output:")
-    for key, val in result.items():
-        print(f"{key.upper()}:")
-        if isinstance(val, dict):
-            pprint(val)
-        elif isinstance(val, list):
-            for i, v in enumerate(val):
-                if isinstance(v, str):
-                    print(f"  [{i+1}] {v.strip()[:300]}...\n")
-                elif isinstance(v, dict):
-                    print(f"  [{i+1}] Source: {v.get('source', 'N/A')}\n")
-                else:
-                    print(f"  [{i+1}] [Unsupported metadata format]\n")
-        else:
-            print(val)
-        print()
-
-    print("📊 Time Breakdown:")
-    print("🔎 Vector Search: {}s".format(result["timing"]["semantic_search"]))
-    print("🧠 LLM Inference: {}s".format(result["timing"]["llm_inference"]))
-    print("⏱️ Total: {}s".format(result["timing"]["total"]))
+    return QueryResponse(
+        question=result["query"],
+        structured_query={
+            "intent": result["intent"]
+        },
+        final_answer=result["answer_structured"]["answer"],
+        matched_clause="\n\n".join(result["answer_structured"]["supporting_clauses"]),
+        reason=result["answer_structured"]["justification"],
+        metadata={
+            "raw_answer": result["raw_answer"],
+            "timing": result["timing"],
+            "doc_title": metadata.get("doc_title") if metadata else "Unknown"
+        }
+    )
+# --- Example Usage ---  
+# if __name__ == "__main__":
+#    query = "Does this policy cover brain surgery, and what are the conditions? and policies?"
+#    result = run_rag_pipeline(query)
+#
+#    print("\n🧾 Final Output:")
+#    for key, val in result.items():
+#        print(f"{key.upper()}:")
+#        if isinstance(val, dict):
+#            pprint(val)
+#        elif isinstance(val, list):
+#            for i, v in enumerate(val):
+#                if isinstance(v, str):
+#                    print(f"  [{i+1}] {v.strip()[:300]}...\n")
+#                elif isinstance(v, dict):
+#                    print(f"  [{i+1}] Source: {v.get('source', 'N/A')}\n")
+#                else:
+#                    print(f"  [{i+1}] [Unsupported metadata format]\n")
+#        else:
+#            print(val)
+#        print()
+#
+#    print("📊 Time Breakdown:")
+#    print("🔎 Vector Search: {}s".format(result["timing"]["semantic_search"]))
+#    print("🧠 LLM Inference: {}s".format(result["timing"]["llm_inference"]))
+#    print("⏱️ Total: {}s".format(result["timing"]["total"]))
