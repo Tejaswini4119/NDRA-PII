@@ -160,7 +160,7 @@ def run_rag_pipeline(user_query: str):
 
 # --- CLI ---
 if __name__ == "__main__":
-    query = "Does this policy cover knee surgery, and what are the conditions?"
+    query = "Does this policy cover brain surgery, and what are the conditions? and policies?"
     result = run_rag_pipeline(query)
 
     print("\n🧾 Final Output:")
