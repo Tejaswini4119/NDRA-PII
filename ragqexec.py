@@ -1,21 +1,21 @@
 # ragqexec.py
-# NDRA | Phase 3B : Fast RAG Pipeline (<4s) + fastllm Primary + Gemini Fallback
+# NDRA | Phase 3B : Fast RAG Pipeline (<4s) + fastllm Primary + Gemini Fallback | Deployments
 
 import os
 import time
 import re
 import chromadb
+from chromadb import HttpClient
 from dotenv import load_dotenv
 from pprint import pprint
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
 from langchain_huggingface import HuggingFaceEmbeddings
-
 from querygenai import extract_query_info_llm, rewrite_query
 from strqgen import build_structured_query, compute_completeness_score
-
 import google.generativeai as genai
 from fastllm import fast_chat  # ✅ Fast Local/API LLM
+
 
 # --- Load Environment Variables ---
 load_dotenv()
@@ -29,8 +29,12 @@ if genai_key:
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 embed_func = embedding_model.embed_query
 
+# Get Chroma host details
+CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
+CHROMA_SSL = os.getenv("CHROMA_SSL", "False").lower() == "true"
 # --- Chroma DB Setup ---
-chroma_client = chromadb.HttpClient(host="localhost", port=8000)
+chroma_client = HttpClient(host=CHROMA_HOST, port=CHROMA_PORT, ssl=CHROMA_SSL)
 collection = chroma_client.get_or_create_collection(name="ndr_chunks")
 print("Chroma Collection Count:", collection.count())
 
