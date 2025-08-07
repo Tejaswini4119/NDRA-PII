@@ -1,15 +1,24 @@
-# Dockerfile
+# Base image
 FROM python:3.11-slim
 
-# Avoid pip prompts + install build tools
-ENV PYTHONUNBUFFERED=1
+# Avoid pip prompts + disable buffering
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-RUN apt-get update && \
-    apt-get install -y curl build-essential && \
-    pip install --no-cache-dir chromadb
-
-# Create a working directory
+# Set working directory
 WORKDIR /app
 
-# Default command to run Chroma HTTP server
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install chromadb using pre-built wheel (avoid Rust)
+RUN pip install "chromadb[chromatic]"
+
+# Expose Chroma's default port
+EXPOSE 8000
+
+# Start command (Render reads this or override it manually)
 CMD ["chroma", "run", "--host", "0.0.0.0", "--port", "8000"]
