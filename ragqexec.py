@@ -15,6 +15,7 @@ from querygenai import extract_query_info_llm, rewrite_query
 from strqgen import build_structured_query, compute_completeness_score
 import google.generativeai as genai
 from fastllm import fast_chat  # ✅ Fast Local/API LLM
+from langchain.embeddings import OpenAIEmbeddings
 
 
 # --- Load Environment Variables ---
@@ -26,7 +27,7 @@ if genai_key:
     genai.configure(api_key=genai_key)
 
 # --- Embedding Setup ---
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
 embed_func = embedding_model.embed_query
 
 # Get Chroma host details
