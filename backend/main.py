@@ -15,13 +15,6 @@ from chromadb.config import Settings
 load_dotenv()
 API_KEY = os.getenv("NDRA_API_KEY")
 
-# Setup ChromaDB in-process
-client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory="/data/chroma"  # persist in Render's persistent volume
-))
-collection = client.get_or_create_collection("ndr_chunks")
-
 app = FastAPI(
     title="Neuro-Semantic Document Research Assistance (NDRA)",
     description="Semantic Query Interface for Policy Documents",
