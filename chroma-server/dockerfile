@@ -1,0 +1,15 @@
+# Dockerfile
+FROM python:3.11-slim
+
+# Avoid pip prompts + install build tools
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && \
+    apt-get install -y curl build-essential && \
+    pip install --no-cache-dir chromadb
+
+# Create a working directory
+WORKDIR /app
+
+# Default command to run Chroma HTTP server
+CMD ["chroma", "run", "--host", "0.0.0.0", "--port", "8000"]
