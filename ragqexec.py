@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from pprint import pprint
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
-from langchain_huggingface import HuggingFaceEmbeddings
 from querygenai import extract_query_info_llm, rewrite_query
 from strqgen import build_structured_query, compute_completeness_score
 import google.generativeai as genai
