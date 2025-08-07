@@ -7,10 +7,20 @@ from backend.models import QueryRequest, QueryResponse
 from ragqexec import run_pipeline  # You will patch this next
 import os
 from dotenv import load_dotenv
+# Importing the necessary libraries
+import chromadb
+from chromadb.config import Settings
 
 # Load API key from .env if exists
 load_dotenv()
 API_KEY = os.getenv("NDRA_API_KEY")
+
+# Setup ChromaDB in-process
+client = chromadb.Client(Settings(
+    chroma_db_impl="duckdb+parquet",
+    persist_directory="/data/chroma"  # persist in Render's persistent volume
+))
+collection = client.get_or_create_collection("ndr_chunks")
 
 app = FastAPI(
     title="Neuro-Semantic Document Research Assistance (NDRA)",
@@ -21,11 +31,11 @@ app = FastAPI(
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
     # Skip token check for root or favicon
-    if request.url.path not in ["/", "/favicon.ico", "/ndra", "/docs", "/redoc", "/openapi.json"]:
+    if request.url.path not in ["/", "/favicon.ico", "/ndrahackrx", "/docs", "/redoc", "/openapi.json"]:
         if API_KEY:
             token = request.headers.get("Authorization")
             if token != f"Bearer {API_KEY}":
-                return JSONResponse(status_code=403, content={"error": "Unauthorized Access, Get an Auth Token From Administrator"})
+                return JSONResponse(status_code=403, content={"error": "Unauthorised Access, Get an Auth Token From Administrator"})
     return await call_next(request)
 
 @app.get("/", response_class=PlainTextResponse)
@@ -36,7 +46,7 @@ async def root():
 async def favicon():
     return PlainTextResponse("", status_code=204)
 
-@app.post("/ndra/run", response_model=QueryResponse)
+@app.post("/hackrx/run", response_model=QueryResponse)
 async def ndra_run(query_input: QueryRequest):
     try:
         result = run_pipeline(query_input.query, query_input.metadata)
@@ -44,7 +54,7 @@ async def ndra_run(query_input: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pipeline failed: {str(e)}")
 
-@app.get("/ndra", response_class=HTMLResponse)
+@app.get("/ndrahackrx", response_class=HTMLResponse)
 async def ndra_dashboard():
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return HTMLResponse(content=f"""
@@ -156,7 +166,7 @@ async def ndra_dashboard():
                 <button onclick="window.open('/redoc', '_blank')">📖 Open Redocs</button>
                 <button onclick="window.open('https://github.com/PardhuSreeRushiVarma20060119/NDRA', '_blank')">🚀 GitHub Repo</button>
                 <button onclick="window.open('mailto:pardhusreevarma@gmail.com?subject=NDRA%20Feedback&body=Your%20feedback%20here...', '_blank')">📧 Email Us</button>
-                <button onclick="window.open('/ndra/run', '_blank')">📨 Run /ndra/run</button>
+                <button onclick="window.open('/hackrx/run', '_blank')">📨 Run /hackrx/run</button>
             </div>
             <div class="time">🕒 Server Time: {current_time}</div>
             <div class="status">System Status: <span style="color: green;">Operational</span></div>
