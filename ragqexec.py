@@ -202,7 +202,7 @@ def run_pipeline(query: str, metadata: dict = None) -> QueryResponse:
         reason=result["answer_structured"]["justification"],
         metadata={
             "raw_answer": result["raw_answer"],
-            "timing": result["timing"],
+            "timing": str(result["timing"]),
             "doc_title": metadata.get("doc_title") if metadata else "Unknown"
         }
     )
