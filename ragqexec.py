@@ -134,16 +134,33 @@ Answer clearly:
 # --- Main LLM Inference Handler ---
 def generate_llm_response(prompt: str) -> str:
     try:
-        # ✅ FastLLM Primary
+        # ✅ Try FastLLM
         return fast_chat(prompt)
     except Exception as fast_error:
         print(f"⚠️ Fast LLM failed, falling back to Gemini: {fast_error}")
         try:
+            import google.generativeai as genai
             model = genai.GenerativeModel("gemini-2.5-flash-lite")
             response = model.generate_content(prompt)
-            return response.text.strip()
+
+            # 🛡️ Debug log Gemini's raw response structure
+            print("Gemini raw response type:", type(response))
+            print("Gemini raw response dir():", dir(response))
+
+            # ✅ Safely extract response content
+            if hasattr(response, "text") and response.text:
+                return response.text.strip()
+            elif hasattr(response, "candidates") and response.candidates:
+                parts = response.candidates[0].content.parts
+                if parts and hasattr(parts[0], "text"):
+                    return parts[0].text.strip()
+                else:
+                    raise ValueError("Gemini response parts are malformed.")
+            else:
+                raise ValueError(f"Unexpected Gemini response structure: {response}")
+
         except Exception as gemini_error:
-            return f"❌ Both LLMs failed. Gemini error: {str(gemini_error)}"
+            raise RuntimeError(f"❌ Both LLMs failed. Gemini error: {str(gemini_error)}")
 
 # --- Full Pipeline ---
 def run_rag_pipeline(user_query: str):
