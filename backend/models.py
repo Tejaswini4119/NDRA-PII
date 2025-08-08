@@ -1,9 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 class QueryRequest(BaseModel):
     query: str
-    metadata: Optional[Dict[str, str]] = None  # Enforce metadata to be a dict of str:str
+    metadata: Optional[Dict[str, Any]] = None  # Enforce metadata to be a dict of str:str
 
     class Config:
         extra = "forbid"  # Disallow any unexpected fields in the payload
