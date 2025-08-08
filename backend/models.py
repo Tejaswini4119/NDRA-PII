@@ -3,7 +3,11 @@ from typing import Optional, Dict
 
 class QueryRequest(BaseModel):
     query: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict[str, str]] = None  # Enforce metadata to be a dict of str:str
+
+    class Config:
+        extra = "forbid"  # Disallow any unexpected fields in the payload
+
 
 class QueryResponse(BaseModel):
     question: str
@@ -11,4 +15,4 @@ class QueryResponse(BaseModel):
     final_answer: str
     matched_clause: str
     reason: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict[str, str]] = None
