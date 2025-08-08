@@ -209,6 +209,11 @@ from backend.models import QueryResponse
 def run_pipeline(query: str, metadata: dict = None) -> QueryResponse:
     result = run_rag_pipeline(query)
 
+    # 🧪 Add these debug prints right before returning the response
+    print("🧪 result['answer_structured']:", result.get("answer_structured"))
+    print("🧪 type of answer_structured:", type(result.get("answer_structured")))
+    print("🧪 full result keys:", result.keys())
+
     return QueryResponse(
         question=result["query"],
         structured_query={
