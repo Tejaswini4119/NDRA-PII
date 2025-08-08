@@ -17,6 +17,8 @@ CHROMA_SSL = os.getenv("CHROMA_SSL", "true").lower() == "true"
 if not CHROMA_HOST:
     raise ValueError("CHROMA_HOST must be set")
 
+print(f"Connecting to: {CHROMA_HOST} {CHROMA_PORT} {CHROMA_SSL}")
+
 # ✅ Connect to remote Chroma
 chroma_client = HttpClient(
     host=CHROMA_HOST,

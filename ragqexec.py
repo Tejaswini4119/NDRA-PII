@@ -29,11 +29,14 @@ if genai_key:
 embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
 embed_func = embedding_model.embed_query
 
-# Get Chroma host details
+# Load from environment
 CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 CHROMA_SSL = os.getenv("CHROMA_SSL", "False").lower() == "true"
-# --- Chroma DB Setup ---
+
+print("Connecting to:", CHROMA_HOST, CHROMA_PORT, CHROMA_SSL)
+
+# Connect to ChromaDB
 chroma_client = HttpClient(host=CHROMA_HOST, port=CHROMA_PORT, ssl=CHROMA_SSL)
 collection = chroma_client.get_or_create_collection(name="ndr_chunks")
 print("Chroma Collection Count:", collection.count())
