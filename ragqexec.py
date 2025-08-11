@@ -26,8 +26,11 @@ if genai_key:
     genai.configure(api_key=genai_key)
 
 # --- Embedding Setup ---
-embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
-embed_func = embedding_model.embed_query
+embed_func = OpenAIEmbeddings(
+    model="text-embedding-3-small",  # must be a model available in OpenRouter
+    openai_api_key=os.getenv("OPENAI_API_KEY"),
+    openai_api_base=os.getenv("OPENAI_API_BASE")
+)
 
 # Load from environment
 CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
