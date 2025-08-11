@@ -203,31 +203,36 @@ def run_rag_pipeline(user_query: str):
             "total": round(overall_end - overall_start, 4)
         }
     }
-# --- Backend Model Wrapper ---
 from backend.models import QueryResponse
+import traceback
 
 def run_pipeline(query: str, metadata: dict = None) -> QueryResponse:
-    result = run_rag_pipeline(query)
+    try:
+        result = run_rag_pipeline(query)
 
-    # 🧪 Add these debug prints right before returning the response
-    print("🧪 result['answer_structured']:", result.get("answer_structured"))
-    print("🧪 type of answer_structured:", type(result.get("answer_structured")))
-    print("🧪 full result keys:", result.keys())
+        # Debug prints (optional)
+        print("🧪 result['answer_structured']:", result.get("answer_structured"))
+        print("🧪 type of answer_structured:", type(result.get("answer_structured")))
+        print("🧪 full result keys:", result.keys())
 
-    return QueryResponse(
-        question=result["query"],
-        structured_query={
-            "intent": result["intent"]
-        },
-        final_answer=result["answer_structured"]["answer"],
-        matched_clause="\n\n".join(result["answer_structured"]["supporting_clauses"]),
-        reason=result["answer_structured"]["justification"],
-        metadata={
-            "raw_answer": result["raw_answer"],
-            "timing": str(result["timing"]),
-            "doc_title": metadata.get("doc_title") if metadata else "Unknown"
-        }
-    )
+        return QueryResponse(
+            question=result["query"],
+            structured_query={
+                "intent": result["intent"]
+            },
+            final_answer=result["answer_structured"]["answer"],
+            matched_clause="\n\n".join(result["answer_structured"]["supporting_clauses"]),
+            reason=result["answer_structured"]["justification"],
+            metadata={
+                "raw_answer": result["raw_answer"],
+                "timing": str(result["timing"]),
+                "doc_title": metadata.get("doc_title") if metadata else "Unknown"
+            }
+        )
+    except Exception as e:
+        print("Pipeline Error:", traceback.format_exc())
+        # Raise an error to let FastAPI handle it with a 500 response
+        raise RuntimeError(f"Pipeline failed internally: {str(e)}")
 # --- Example Usage ---  
 # if __name__ == "__main__":
 #    query = "Does this policy cover brain surgery, and what are the conditions? and policies?"
