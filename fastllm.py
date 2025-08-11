@@ -1,6 +1,6 @@
 # fastllm.py
 import os
-from openai import OpenAI
+import openai
 from dotenv import load_dotenv
 
 # ✅ Load .env variables
@@ -14,7 +14,7 @@ if not api_key or not base_url:
     raise ValueError("Missing OpenRouter key or base URL in .env")
 
 # ✅ Initialize OpenAI client for OpenRouter
-openai_client = OpenAI(
+openai_client = openai(
     api_key=api_key,
     base_url=base_url
 )
