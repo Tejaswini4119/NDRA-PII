@@ -16,6 +16,7 @@ import google.generativeai as genai
 from fastllm import fast_chat  # ✅ Fast Local/API LLM
 from langchain.embeddings import OpenAIEmbeddings
 
+
 # --- Load Environment Variables ---
 load_dotenv()
 
