@@ -20,7 +20,7 @@ openai.api_base = base_url  # ✅ exact URL
 def fast_chat(prompt: str) -> str:
     try:
         response = openai.ChatCompletion.create(
-            model="mistralai/mistral-7b-instruct:free",  # ✅ real model ID
+            model="openchat/openchat-3.5-0106",  # Example: replace with a valid model ID
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message["content"].strip()
