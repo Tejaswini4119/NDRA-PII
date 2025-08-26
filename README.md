@@ -78,33 +78,8 @@ This module powers the brain of NDRA, enabling contextual matching and semantic 
 - Rate-limiting and async task queuing (if time permits).
 
 
-## Frontend – Streamlit-based Web UI
-
-### Role: UI Developer 
-
-- Streamlit-based responsive UI for easy interaction
-- Allows document upload and query submission
-- Displays structured JSON response with:
-  - Final decision (approve/reject)
-  - Eligible amount (if any)
-  - Clause reference text and location
-- Ideal for demo/testing, supports real-time inference
-
-**Enhancements:**
-
-- Clear layout with status updates and chunk-level visibility
-- Supports CLI fallback for advanced users
-
 ---
 
-### Technology Stack
-- Frontend: Streamlit (Python)
-- Backend: Node.js (Fastify), Python microservices (via Flask/FastAPI for AI tasks)
-- AI: HuggingFace Transformers, Gemini APIs, ChromaDB, Langchain
-- Storage: Chroma Vector Store, Pickle for chunk storage
-
-
----
 
 ## Project Structure
 
