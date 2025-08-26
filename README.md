@@ -1,3 +1,7 @@
+---
+> This Project Has Been Archived, And No Longer Under Active Development & Maintenance
+---
+
 # Neuro-Semantic Document Research Assistance (NDRA)
 > *“NDRA: Neuro-semantic intelligence to interpret large unstructured documents.”*
 
