@@ -1,12 +1,7 @@
-# Neuro-Semantic Document Research Assistance (NDRA) – HackRx 6.0
+# Neuro-Semantic Document Research Assistance (NDRA)
 > *“NDRA: Neuro-semantic intelligence to interpret large unstructured documents.”*
 
 NDRA (Neuro-Semantic Document Research Assistance) is a semantic, transformer-based retrieval and reasoning system designed to extract structured knowledge from large, unstructured textual documents such as insurance policies, legal contracts, and corporate communications. It leverages **Domain-Adapted Embedding Models**, **Contextual Chunking Strategies**, and **Retrieval-Augmented Generation (RAG) Pipelines** to align vague or under-specified user queries with document clauses, enabling high-fidelity question answering and policy decision support.
-
----
-
-## HackRx 6.0 – Bajaj Finserv Health Limited
-This project was developed for HackRx 6.0, organized by Bajaj Finserv Health Ltd., under the theme “The Next Gen of GenAI.” NDRA addresses the challenge of automating complex document reasoning based on natural language queries from users or claimants.
 
 ---
 
