@@ -4,7 +4,7 @@
 
 [![Status](https://img.shields.io/badge/Status-Operational-brightgreen)]()
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
-[![License](https://img.shields.io/badge/License-GPLv3-red)](LICENCE)
+[![License](https://img.shields.io/badge/License-GPLv3-red)](LICENSE)
 
 ## Overview
 
