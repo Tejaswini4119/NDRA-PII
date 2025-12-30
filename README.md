@@ -60,7 +60,7 @@ This module powers the brain of NDRA, enabling contextual matching and semantic 
 
 ## Backend – FastAPI Service Layer
 
-### Role 1: Backend Dev
+### Role 1: Backend Development 
 - Developed ingestion pipeline in FastAPI.
 - Handled file parsing logic for PDF, DOCX, and email formats.
 - Connected parsed output to AI chunking and embedding modules.
