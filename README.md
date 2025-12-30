@@ -2,7 +2,7 @@
 
 **Enterprise-Grade Privacy Intelligence System**
 
-[![Status](https://img.shields.io/badge/Status-Operational-brightgreen)]()
+[![Status](https://img.shields.io/badge/Status-Operational-Darkgreen)]()
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/License-GPLv3-red)](LICENSE)
 
