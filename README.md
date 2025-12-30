@@ -98,5 +98,5 @@ python -m unittest discover tests
 ## Authors
 - **Tejaswini** - *Lead, Applied Intelligence & Data Semantics Engineer - NDRA Intelligence Systems*
 - **Pardhu Sree Rushi Varma** - *Core Architecture, Security & Governance Engineer - NDRA Governance Systems*
-- **Rupa Yeshvitha Karedla** -  *Data Cleaning & Preprocessing Engineer - NDRA DataPipelines*
+- **Rupa Yeshvitha Karedla** -  *Data Cleaning & Preprocessing Engineer - NDRA Data-Pipelines*
 
