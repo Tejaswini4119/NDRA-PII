@@ -1,166 +1,99 @@
+# NDRA-PII: Neuro-Semantic Distributed Risk Analysis for PII
 
-> This Project Has Been Archived, And No Longer Under Active Development & Maintenance
----
+**Enterprise-Grade Privacy Intelligence System**
 
-# Neuro-Semantic Document Research Assistance (NDRA)
-> *“NDRA: Neuro-semantic intelligence to interpret large unstructured documents.”*
+[![Status](https://img.shields.io/badge/Status-Operational-brightgreen)]()
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
+[![License](https://img.shields.io/badge/License-Proprietary-red)]()
 
-NDRA (Neuro-Semantic Document Research Assistance) is a semantic, transformer-based retrieval and reasoning system designed to extract structured knowledge from large, unstructured textual documents such as insurance policies, legal contracts, and corporate communications. It leverages **Domain-Adapted Embedding Models**, **Contextual Chunking Strategies**, and **Retrieval-Augmented Generation (RAG) Pipelines** to align vague or under-specified user queries with document clauses, enabling high-fidelity question answering and policy decision support.
+## Overview
 
----
+NDRA-PII is an advanced multi-agent system designed to automatically **detect**, **evaluate**, and **redact** Personally Identifiable Information (PII) from unstructured documents. Unlike simple regex tools, NDRA-PII employs a **Neuro-Semantic** approach, combining NLP signals with rigorous, logic-based **governance policies (NSRL)** to determine the risk level of every detected entity before taking action.
 
-## Objective
+## Key Features
 
-To build a robust system capable of:
+- **Multi-Agent Architecture**: Specialized agents for Extraction, Classification, Fusion, Policy, and Redaction.
+- **NSRL Policy Engine**: Configurable YAML-based rules (e.g., "Redact US SSN if High Severity").
+- **Smart Redaction**: Re-flows documents to strictly mask sensitive data while preserving context.
+- **Audit Trails**: Full decision lineage for compliance (GDPR, HIPAA, PCI-DSS).
 
-- Understanding vague user queries like:  
-  _“46-year-old male, knee surgery in Pune, 3-month-old policy”_
-- Extracting structured data: age, procedure, gender, location, duration
-- Mapping those fields to relevant policy clauses
-- Evaluating eligibility logic from the document
-- Producing a structured JSON response that includes:
-  - Approval or rejection
-  - Eligible amount (if any)
-  - Clause-level justification for the decision
+## Architecture
 
----
+The system operates as a linear pipeline:
 
-## System Architecture Overview
+1.  **Ingestion Agent**: Reads PDF, DOCX, TXT.
+2.  **Classifier Agent**: Detects PII (Presidio + Spacy + Regex).
+3.  **Fusion Agent**: Merges overlapping entities (e.g., "New York" vs "New York City").
+4.  **Policy Agent**: Applies NSRL rules to assign Risk Scores and Actions.
+5.  **Redaction Agent**: Executes "Redact" actions.
+6.  **Output**: Generates sanitized documents (`_redacted.pdf`).
 
-NDRA follows a modular, phase-based pipeline for ai-core divided into four major components:
+## Directory Structure
 
-1. **Document Preprocessing and Chunking**
-2. **Embedding Generation and Storage**
-3. **Query Understanding and Structuring**
-4. **Retrieval-Augmented Generation (RAG) and Decision Engine**
+| Directory | Description |
+| :--- | :--- |
+| `agents/` | Core logic for all autonomous agents. |
+| `config/` | System configuration and architectural constraints. |
+| `nsrl/` | **Neuro-Semantic Rule Language** definitions (Rules, Specs). |
+| `schemas/` | Pydantic data models for strict type safety. |
+| `datasets/`| Test data for benchmarking. |
+| `tests/` | Unit and integration test suite. |
+| `reports/` | Generated implementation and audit reports. |
 
----
+## Quick Start
 
-## AI Core – Semantic Pipeline
+### Prerequisites
+- Python 3.10+
+- `pip`
 
-### Role: Semantic & RAG Pipeline Engineer
+### Installation
+```bash
+git clone https://github.com/Tejaswini4119/NDRA-PII.git
+cd NDRA
+pip install -r requirements.txt
+python -m spacy download en_core_web_lg
+```
 
-This module powers the brain of NDRA, enabling contextual matching and semantic interpretation of queries and document content.
+### Usage (CLI)
+The most interactive way to use NDRA-PII is the CLI:
 
-- Transformer-based chunking with semantic boundary awareness
-- Embedding generation using `sentence-transformers` (e.g., all-MiniLM-L6-v2)
-- Chroma vector store for persistent semantic retrieval
-- LangChain-based RAG pipeline for context retrieval
-- LLM (Gemini) for synthesizing final decision + justification
-- Clause traceability ensured via mapping top-K chunks to source metadata
+```bash
+python ndrapiicli.py
+```
+1.  Enter the path to your file (e.g., `datasets/Testing_Set.pdf`).
+2.  The system will process the file through all agents.
+3.  The result will be saved in `output/` as `filename_redacted.pdf`.
 
-**Enhancements:**
+### Usage (API)
+Start the server:
+```bash
+python main.py
+```
+POST to `http://localhost:8000/analyze/upload`.
 
-- Query Understanding and Intent Mapping
-- Document Ingestion and Preprocessing
-- Semantic-aware chunking improves retrieval precision
-- Context window optimization for LLM input (RAG prompt design)
-- Handles vague/incomplete queries with structured fallback logic
+## Policy Configuration (NSRL)
+Policies are defined in `nsrl/rules/`. Example Rule:
 
+```yaml
+id: "FIN-PCI-CC-HIGH-001"
+meta:
+  name: "Credit Card High Risk"
+  priority: 100
+conditions:
+  - type: "PII_TYPE"
+    operator: "EQUALS"
+    value: "CREDIT_CARD"
+actions:
+  classification: "RESTRICTED"
+  severity: "CRITICAL"
+  score: 1.0
+  justification: "PCI-DSS mandated protection."
+```
 
-## Backend – FastAPI Service Layer
+## Running Tests
+```bash
+python -m unittest discover tests
+```
 
-### Role 1: Backend Dev
-- Developed ingestion pipeline in FastAPI.
-- Handled file parsing logic for PDF, DOCX, and email formats.
-- Connected parsed output to AI chunking and embedding modules.
-- Integrated Chroma vector store endpoints with FastAPI.
-- Maintains modular pipeline routing for document preprocessing.
-
-### Role 2: API Dev
-- Built user-facing endpoints for:
-  - Document upload
-  - Query submission
-  - Final JSON output retrieval
-- Implemented structured logging, validation, and error handling.
-- Connected API endpoints to internal semantic pipeline and LLM decision modules.
-
-**Enhancements:**
-- Multi-domain policy support (Health, Motor, etc.)
-- Robust fallback for missing fields and vague queries.
-- Entity extraction and dynamic field structuring into JSON.
-- Rate-limiting and async task queuing (if time permits).
-
-
----
-
-
-## Project Structure
-
-### AI / Semantic Core Engineering (Handled by Member 2)
-Everything from Phase 1A to 3B is covered under Semantic & RAG Pipeline Engineering.
-
-#### ✅ Phase 1A – Preprocessing & Chunking
-- Cleaned raw documents (PDF, DOCX, Emails).
-- Removed noise like headers, footers, signatures.
-- Applied semantic-aware chunking pipeline.
-- Output stored as `chunks.pkl`.
-
-#### ✅ Phase 1B – Embedding & Vector Store
-- Used HuggingFace model (`all-MiniLM-L6-v2`) for contextual vectorization.
-- Stored embeddings in Chroma Vector Database.
-- Enabled semantic search with vector indexing.
-
-#### ✅ Phase 2A – Query Understanding
-- Parsed user queries using LLM (e.g., Gemini Pro).
-- Domain detection: Health, Motor, etc.
-- Rewritten for structured understanding and improved answerability.
-
-#### ✅ Phase 2B – Intent Mapping
-- Mapped query to structured JSON:
-  - Fields like age, gender, location, procedure, policy duration.
-- Tagged missing/ambiguous values for LLM-based fill.
-- Matched queries with document types.
-
-#### ✅ Phase 3A – Contextual Response Synthesis (RAG-P1)
-- Retrieved top-k relevant chunks via semantic search.
-- Combined chunks + structured query.
-- Prompted LLM to synthesize answer with citation traces.
-
-#### ✅ Phase 3B – Decision Logic & Output Structuring (RAG-P2)
-- Extended RAG to include:
-  - Conflict detection
-  - Missing field detection
-  - Edge case fallback logic
-- Final output generated as:
-  - Structured JSON
-  - Natural language explanation
-
-#### ✅ Phase 3C – Speed Optimisation
-- Speed Up The Response Time Period <8s
-  - Parllell Processing
-  - FastLLM via OpenRouter
-  - Failsafe Gemini Fallback
-  - Optimisations
-
----
-
-### Backend Engineering (Handled by Member 3 & Member 4)
-
-- API endpoints for:
-  - Document upload & ingestion
-  - User query processing
-  - LLM-based semantic routing
-  - Final JSON output delivery
-- Manages communication with AI module.
-- Error handling & Modular Pipeline Routing.
-
----
-
-### Frontend (Streamlit Interface) (Handled by Member 1)
-
-- Upload policy documents (PDF, DOCX, Email).
-- Input vague or natural language queries.
-- Display final structured output:
-  - Approved/Rejected
-  - Amount covered
-  - Cited clause justification
-- Fast, minimal UI for demo and hackathon judging.
-
----
-
-> *“Information isn’t knowledge until it’s interpretable. NDRA bridges that gap using AI.”*
-
--Team NDRA
-
-
+## Authors
+- **Tejaswini** - *Lead Developer*
