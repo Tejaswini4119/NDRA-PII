@@ -1,0 +1,19 @@
+# NSRL Rules for Digital Identifiers
+
+- id: "DIG-IP-001"
+  version: "1.0"
+  meta:
+    name: "IP Address"
+    description: "Detects IPv4/IPv6 addresses."
+    priority: 40
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "IP_ADDRESS"
+
+  actions:
+    classification: "INTERNAL"  
+    severity: "LOW"
+    score: 0.1

@@ -1,0 +1,79 @@
+# NSRL Escalation Logic
+# Domain: Cross-PII Risk / Density
+# Concept: "Toxic Combinations" - PII is more dangerous when combined.
+
+# --- DENSITY RULES ---
+
+- id: "ESC-DENSITY-EXTREME-001"
+  version: "1.0"
+  meta:
+    name: "Extreme PII Density"
+    description: "File contains > 50 PII entities."
+    priority: 200
+
+  conditions:
+    - type: "CONTEXT_MATCH"
+      field: "pii_total_count"
+      operator: "GREATER_THAN"
+      value: 50
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 1.0
+    justification: "Massive PII leak risk (High Density: >50 items)."
+    tags: ["data_exfiltration_risk"]
+
+
+# --- TOXIC COMBINATIONS ---
+
+# IDENTITY + HEALTH (Diagnosis linked to Person)
+- id: "ESC-TOXIC-ID-HEALTH-001"
+  version: "1.0"
+  meta:
+    name: "Toxic: Identity + Health"
+    description: "Presence of both Gov ID and Medical codes in same document."
+    priority: 150
+
+  conditions:
+    - type: "CONTEXT_MATCH"
+      field: "has_gov_id"
+      operator: "EQUALS"
+      value: true
+      
+    - type: "CONTEXT_MATCH"
+      field: "has_healthcare_data"
+      operator: "EQUALS"
+      value: true
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 0.95
+    justification: "Risk Elevation: Document links Identity to Health Data (HIPAA)."
+
+
+# IDENTITY + FINANCE (Identity Theft Kit)
+- id: "ESC-TOXIC-ID-FIN-001"
+  version: "1.0"
+  meta:
+    name: "Toxic: Identity + Finance"
+    description: "Presence of both Gov ID and Financial data."
+    priority: 150
+
+  conditions:
+    - type: "CONTEXT_MATCH"
+      field: "has_gov_id"
+      operator: "EQUALS"
+      value: true
+      
+    - type: "CONTEXT_MATCH"
+      field: "has_financial_data"
+      operator: "EQUALS"
+      value: true
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 0.95
+    justification: "Risk Elevation: Identity Theft Potential (ID + Finance)."

@@ -1,0 +1,89 @@
+# NSRL Rules for Financial PII
+# Domain: Banking / Payments / Crypto
+
+# --- PAYMENT CARDS (PCI-DSS) ---
+
+- id: "FIN-PCI-CC-HIGH-001"
+  version: "1.1"
+  meta:
+    name: "Credit Card (Primary)"
+    description: "Detects Major Credit Card numbers."
+    tags: ["pci", "financial", "critical"]
+    priority: 100
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "CREDIT_CARD"
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 1.0
+    justification: "PCI-DSS mandated protection. Clear text credit card number."
+    tags: ["pci_violation", "immediate_redaction"]
+
+
+# --- BANKING ---
+
+- id: "FIN-BANK-IBAN-001"
+  version: "1.0"
+  meta:
+    name: "IBAN (Europe)"
+    description: "International Bank Account Number."
+    tags: ["financial", "banking"]
+    priority: 90
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "IBAN_CODE"
+
+  actions:
+    classification: "CONFIDENTIAL"
+    severity: "HIGH"
+    score: 0.9
+    justification: "Banking coordinate detected."
+
+- id: "FIN-BANK-SWIFT-001"
+  version: "1.0"
+  meta:
+    name: "SWIFT/BIC Code"
+    description: "Bank Identifier Code."
+    priority: 80
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "SWIFT_CODE"
+
+  actions:
+    classification: "INTERNAL"
+    severity: "MEDIUM"
+    score: 0.5
+
+
+# --- CRYPTOCURRENCY ---
+
+- id: "FIN-CRYPTO-BTC-001"
+  version: "1.0"
+  meta:
+    name: "Bitcoin Wallet Address"
+    description: "BTC Address detection."
+    tags: ["crypto", "financial"]
+    priority: 85
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "CRYPTO_BTC_WALLET"
+
+  actions:
+    classification: "CONFIDENTIAL"
+    severity: "MEDIUM"
+    score: 0.7
+    justification: "Cryptocurrency wallet address detected."

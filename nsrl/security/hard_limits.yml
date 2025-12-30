@@ -1,0 +1,23 @@
+# NSRL Security Hard Limits & Resource Constraints
+# Enforced by the engine to prevent DoS and abuse.
+
+limits:
+  # --- Structure Limits ---
+  max_rules_per_file: 1000
+  max_conditions_per_rule: 25
+  max_actions_per_rule: 5
+  max_nested_depth: 3            # Allow shallow nesting for AND/OR groups
+
+  # --- Resource Limits ---
+  execution_timeout_ms: 50       # Strict real-time deadline
+  max_memory_per_request_mb: 2   # Heap limit per evaluation
+  max_input_size_bytes: 1048576  # 1MB payload limit
+
+  # --- Anti-ReDOS & Parsing ---
+  max_string_length: 10000
+  regex_config:
+    allow_backtracking: false    # STRICT: interacting with regex engine
+    max_complexity_score: 100
+    timeout_ms: 5                # Individual regex timeout
+  
+  recursion_depth: 0             # 0 = No recursion allowed (Invariant)
