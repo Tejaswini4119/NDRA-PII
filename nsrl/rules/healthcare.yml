@@ -1,0 +1,21 @@
+# NSRL Rules for Healthcare PII
+
+- id: "HEALTH-ICD10-001"
+  version: "1.0"
+  meta:
+    name: "ICD-10 Code"
+    description: "Medical diagnosis code."
+    tags: ["hipaa", "health"]
+    priority: 95
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "ICD10_CODE"
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "HIGH"
+    score: 0.95
+    justification: "PHI detected (Diagnosis Code)."

@@ -1,0 +1,21 @@
+# NSRL Jurisdiction Rules
+
+- id: "JUR-GDPR-001"
+  version: "1.0"
+  meta:
+    name: "EU Jurisdiction"
+    description: "Applies GDPR context for EU data."
+    priority: 150
+
+  conditions:
+    - type: "CONTEXT_MATCH"
+      field: "jurisdiction"
+      operator: "EQUALS"
+      value: "EU"
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "HIGH"
+    score: 0.8
+    justification: "EU Jurisdiction implies GDPR."
+    tags: ["GDPR_APPLICABLE"]

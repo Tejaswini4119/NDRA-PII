@@ -1,0 +1,62 @@
+# NSRL Positive Test Cases
+# Scenarios that MUST trigger rules.
+
+tests:
+  # --- US IDs ---
+  - name: "Detect US SSN (High Confidence)"
+    input:
+      object:
+        value: "123-45-6789"
+        type: "US_SSN"
+        confidence: 0.99
+    expected_output:
+      allowed: true
+      classification: "RESTRICTED"
+      matched_rules: ["GOV-US-SSN-HIGH-001"]
+
+  # --- International IDs ---
+  - name: "Detect UK NINO"
+    input:
+      object:
+        value: "QQ123456C"
+        type: "UK_NINO"
+        confidence: 0.95
+    expected_output:
+      classification: "RESTRICTED"
+      matched_rules: ["GOV-GB-NINO-001"]
+
+  - name: "Detect India Aadhaar"
+    input:
+      object:
+        value: "1234 5678 9012"
+        type: "IN_AADHAAR"
+        confidence: 0.98
+    expected_output:
+      classification: "RESTRICTED"
+      matched_rules: ["GOV-IN-UID-001"]
+
+  # --- Financial / Crypto ---
+  - name: "Detect Bitcoin Wallet"
+    input:
+      object:
+        value: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        type: "CRYPTO_BTC_WALLET"
+        confidence: 0.90
+    expected_output:
+      classification: "CONFIDENTIAL"
+      matched_rules: ["FIN-CRYPTO-BTC-001"]
+
+  # --- Toxic Combinations (Context escalation) ---
+  - name: "Toxic Combo: ID + Health"
+    input:
+      object:
+        value: "METADATA_TRIGGER" # Placeholder
+        type: "DOC_CONTEXT"
+        confidence: 1.0
+      context:
+        has_gov_id: true
+        has_healthcare_data: true
+    expected_output:
+      classification: "RESTRICTED"
+      severity: "CRITICAL"
+      matched_rules: ["ESC-TOXIC-ID-HEALTH-001"]

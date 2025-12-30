@@ -1,0 +1,57 @@
+# NSRL Engine Output Contract
+# Describes the data structure returned by the rules engine.
+
+type: object
+required:
+  - requestId
+  - timestamp
+  - result
+
+properties:
+  requestId:
+    type: string
+    description: "Echoed from input"
+  
+  timestamp:
+    type: string
+    format: date-time
+    description: "Execution finish time"
+
+  result:
+    type: object
+    required:
+      - allowed
+      - classification
+      - severity
+    properties:
+      allowed:
+        type: boolean
+        description: "Whether the data is permitted in the current context (high-level synthesis)"
+      
+      classification:
+        type: string
+        enum: ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED", "CRITICAL"]
+        description: "Data sensitivity classification"
+      
+      severity:
+        type: string
+        enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        description: "Risk severity"
+
+      score:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        description: "Normalized sensitivity score"
+
+      matchedRules:
+        type: array
+        items:
+          type: object
+          properties:
+            ruleId:
+              type: string
+            ruleVersion:
+              type: string
+            justification:
+              type: string

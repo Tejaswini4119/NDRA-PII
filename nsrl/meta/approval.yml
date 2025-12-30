@@ -1,0 +1,7 @@
+# NSRL Approval Ledger
+
+- id: "APP-001"
+  date: "2025-12-20"
+  approver: "System Admin"
+  status: "PENDING_REVIEW"
+  scope: "Initial v1.0 Deployment"

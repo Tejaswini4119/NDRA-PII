@@ -1,0 +1,15 @@
+# NSRL Policy Manifest
+# Central index of all active rules.
+
+active_modules:
+  - "rules/gov_id.yml"
+  - "rules/financial.yml"
+  - "rules/healthcare.yml"
+  - "rules/personal.yml"
+  - "rules/digital.yml"
+  - "rules/escalation.yml"
+  - "rules/jurisdiction.yml"
+  - "rules/tenant_overrides.yml"
+
+version: "1.0.0"
+last_updated: "2025-12-20"

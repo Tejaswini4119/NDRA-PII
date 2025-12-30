@@ -1,0 +1,23 @@
+# NSRL Negative Test Cases
+# Scenarios that MUST NOT trigger false positives.
+
+tests:
+  - name: "Ignore Random Numbers (SSN-like)"
+    input:
+      object:
+        value: "987-65-4321" # Invalid SSN range
+        type: "US_SSN"
+        confidence: 0.25      # Very low confidence
+    expected_output:
+      matched_rules: []       # Should NOT trigger even Low Conf rule (>0.40)
+
+  - name: "Ignore Sample Data Context"
+    input:
+      object:
+        value: "123-45-6789"
+        type: "US_SSN"
+        confidence: 0.99
+      context:
+        documentType: "TEST_SAMPLE_DATA"
+    expected_output:
+      allowed: true           # If we had an override rule (theoretical)

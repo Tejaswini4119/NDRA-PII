@@ -1,0 +1,30 @@
+# NSRL Integrity & Trust Policy
+# Ensures rule definitions are tamper-proof and authorized.
+
+policy:
+  enforcement_mode: "FAIL_CLOSED"  # If check fails, engine refuses to start.
+
+checksums:
+  algorithm: "sha256"
+  manifest_path: "meta/policy_manifest.yml"
+  enforce_strict_mode: true        # No orphan files allowed
+
+signatures:
+  enabled: true
+  required_for_env: ["PROD", "STAGING"]
+  verification_strategy: "RSASSA-PSS"
+  
+  keys:
+    primary_key_path: "/etc/secrets/nsrl_signing_primary.pem"
+    rotation_policy: "90_DAYS"
+    trusted_fingerprints:
+      - "SHA256:7a8b9c...a1b2c3" # Ops Team (Rotation A)
+      - "SHA256:1d2e3f...4g5h6i" # Compliance Officer
+
+  revocation:
+    crl_path: "security/revocation_list.crl"
+    check_online: false            # Keep offline for deterministic speed (Periodic Sync)
+
+validation_events:
+  - "ON_ENGINE_START"
+  - "ON_CONFIG_RELOAD"

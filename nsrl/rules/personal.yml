@@ -1,0 +1,37 @@
+# NSRL Rules for Personal PII
+
+- id: "PII-EMAIL-001"
+  version: "1.0"
+  meta:
+    name: "Email Address"
+    description: "Detects standard email addresses."
+    priority: 60
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "EMAIL_ADDRESS"
+
+  actions:
+    classification: "INTERNAL"
+    severity: "LOW"
+    score: 0.3
+
+- id: "PII-PHONE-001"
+  version: "1.0"
+  meta:
+    name: "Phone Number"
+    description: "Detects phone numbers."
+    priority: 60
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "PHONE_NUMBER"
+
+  actions:
+    classification: "INTERNAL"
+    severity: "LOW"
+    score: 0.3

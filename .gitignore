@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.venv
+output/
+reports/
+agx/
+core/
+config/
+devdocs/
+ndra-old/
+*.log

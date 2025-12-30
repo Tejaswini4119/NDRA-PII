@@ -1,0 +1,130 @@
+# NSRL Rules for Government Identification
+# Domain: Identity / Government
+# Coverage: US (SSN), UK (NINO), IN (Aadhaar), EU (Passports)
+
+# --- US SOCIAL SECURITY NUMBER ---
+
+- id: "GOV-US-SSN-HIGH-001"
+  version: "1.1"
+  meta:
+    name: "US SSN (High Confidence)"
+    description: "Detects US SSN with strict formatting and validation checks."
+    tags: ["pii", "financial", "us", "sensitive"]
+    priority: 100
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "US_SSN"
+    
+    - type: "PII_MATCH"
+      field: "confidence"
+      operator: "GREATER_THAN"
+      value: 0.85
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 1.0
+    justification: "Critical PII: US SSN confirmed with high confidence."
+    tags: ["identity_theft_risk", "notify_security"]
+
+- id: "GOV-US-SSN-LOW-001"
+  version: "1.1"
+  meta:
+    name: "US SSN (Low Confidence)"
+    description: "Detects potential US SSN with weak formatting."
+    priority: 50
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "US_SSN"
+      
+    - type: "PII_MATCH"
+      field: "confidence"
+      operator: "LESS_THAN_OR_EQUALS"
+      value: 0.85
+
+    - type: "PII_MATCH"
+      field: "confidence"
+      operator: "GREATER_THAN"
+      value: 0.40
+
+  actions:
+    classification: "CONFIDENTIAL"
+    severity: "MEDIUM"
+    score: 0.6
+    justification: "Potential US SSN detected (Low Confidence). Manual review suggested."
+    tags: ["review_required"]
+
+
+# --- UK NATIONAL INSURANCE NUMBER ---
+
+- id: "GOV-GB-NINO-001"
+  version: "1.0"
+  meta:
+    name: "UK NINO"
+    description: "UK National Insurance Number."
+    tags: ["pii", "uk", "tax"]
+    priority: 95
+  
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "UK_NINO"
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "HIGH"
+    score: 0.9
+    justification: "UK National Insurance Number detected."
+
+
+# --- INDIA AADHAAR ---
+
+- id: "GOV-IN-UID-001"
+  version: "1.0"
+  meta:
+    name: "India Aadhaar"
+    description: "Unique Identification Authority of India (UIDAI) Number."
+    tags: ["pii", "india", "biometric_linked"]
+    priority: 100
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "EQUALS"
+      value: "IN_AADHAAR"
+
+  actions:
+    classification: "RESTRICTED"
+    severity: "CRITICAL"
+    score: 1.0
+    justification: "Aadhaar Number detected. Highly sensitive biometric-linked ID."
+
+
+# --- PASSPORTS ---
+
+- id: "GOV-PASSPORT-EU-001"
+  version: "1.0"
+  meta:
+    name: "EU Passport"
+    description: "Standard EU Passport detection."
+    tags: ["gdpr", "travel"]
+    priority: 90
+
+  conditions:
+    - type: "PII_MATCH"
+      field: "type"
+      operator: "IN_LIST"
+      value: ["DE_PASSPORT", "FR_PASSPORT", "ES_PASSPORT", "IT_PASSPORT"]
+
+  actions:
+    classification: "CONFIDENTIAL"
+    severity: "HIGH"
+    score: 0.85
+    justification: "EU Passport detected. GDPR regulations apply."

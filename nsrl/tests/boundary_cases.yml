@@ -1,0 +1,44 @@
+# NSRL Boundary Cases
+# Edge cases and ambiguous inputs.
+
+tests:
+  # --- Confidence Thresholds ---
+  - name: "Confidence Boundary: Just Below High (0.85)"
+    input:
+      object:
+        value: "SSN-CANDIDATE"
+        type: "US_SSN"
+        confidence: 0.850
+    expected_output:
+      matched_rules: ["GOV-US-SSN-LOW-001"] # <= 0.85
+
+  - name: "Confidence Boundary: Just Above High (0.851)"
+    input:
+      object:
+        value: "SSN-CANDIDATE"
+        type: "US_SSN"
+        confidence: 0.851
+    expected_output:
+      matched_rules: ["GOV-US-SSN-HIGH-001"] # > 0.85
+
+  # --- Density Thresholds ---
+  - name: "Density Boundary: Safe (50 items)"
+    input:
+      object:
+        value: "TRIGGER"
+        type: "DOC_CONTEXT"
+      context:
+        pii_total_count: 50
+    expected_output:
+      matched_rules: [] # Threshold is > 50, so 50 is safe
+
+  - name: "Density Boundary: Critical (51 items)"
+    input:
+      object:
+        value: "TRIGGER"
+        type: "DOC_CONTEXT"
+      context:
+        pii_total_count: 51
+    expected_output:
+      severity: "CRITICAL"
+      matched_rules: ["ESC-DENSITY-EXTREME-001"]
