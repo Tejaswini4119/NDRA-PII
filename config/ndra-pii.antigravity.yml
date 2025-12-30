@@ -1,0 +1,315 @@
+# ============================================================
+# NDRA-PII APPLICATION CONFIGURATION
+# Google Antigravity IDE / AGX Runtime
+# ============================================================
+
+application:
+  name: NDRA-PII
+  version: "1.0.0"
+  description: "Neuro-Semantic Multi-Agent PII Intelligence System"
+  class: governed_intelligence
+  autonomy_level: intelligence_only
+  identity_persistence: false
+  auditable: true
+  killable: true
+
+# ------------------------------------------------------------
+# RUNTIME CONSTRAINTS
+# ------------------------------------------------------------
+runtime:
+  execution:
+    deterministic: true
+    replayable: true
+    fail_closed_on_uncertainty: true
+
+  isolation:
+    agent_microkernels: true
+    shared_memory: false
+    ipc: message_only
+
+  lifecycle:
+    hot_reload: false
+    memory_wipe_on_exit: true
+
+# ------------------------------------------------------------
+# COMPUTE & ACCELERATION
+# ------------------------------------------------------------
+compute:
+  local:
+    enabled: true
+
+  cloud:
+    enabled: true
+    provider: google
+    accelerators:
+      gpu:
+        allowed: true
+        types: [A100, H100]
+      tpu:
+        allowed: true
+        versions: [v4, v5e]
+
+  scheduling:
+    priority: high
+    preemptible_ok: true
+
+# ------------------------------------------------------------
+# DATA HANDLING & PRIVACY
+# ------------------------------------------------------------
+data:
+  retention:
+    raw_pii_allowed: false
+    anonymized_patterns_only: true
+
+  protection:
+    hashing: true
+    encryption_at_rest: true
+    encryption_in_transit: true
+
+  access:
+    least_privilege: true
+    role_based: true
+
+# ------------------------------------------------------------
+# AGENT DEFINITIONS
+# ------------------------------------------------------------
+agents:
+
+  extractor:
+    enabled: true
+    role: ingestion_and_segmentation
+    isolation: strict
+    responsibilities:
+      - input_ingestion
+      - semantic_chunking
+      - context_windowing
+      - metadata_tagging
+    forbidden:
+      - classification
+      - inference
+      - policy_decisions
+
+  classifier:
+    enabled: true
+    role: pii_detection_and_classification
+    isolation: strict
+    detection_stack:
+      regex: true
+      ner_models: true
+      semantic_embeddings: true
+      cross_field_correlation: true
+    output:
+      confidence_scores: true
+      ambiguity_flags: true
+      evidence_vectors: true
+    forbidden:
+      - redaction
+      - enforcement
+
+  normalizer:
+    enabled: true
+    role: canonicalization
+    isolation: strict
+    locale_aware: true
+    identity_persistence: false
+    responsibilities:
+      - format_normalization
+      - noise_reduction
+      - ephemeral_entity_alignment
+    forbidden:
+      - cross_session_linking
+      - global_identity_creation
+
+  semantic_graph:
+    enabled: true
+    purpose: contextual_understanding
+    persistence:
+      ephemeral_default: true
+      anonymized_only: true
+    explainability_required: true
+
+  risk_engine:
+    enabled: true
+    role: dynamic_risk_intelligence
+    scoring:
+      factors:
+        - pii_sensitivity
+        - data_volume
+        - exposure_context
+        - access_path
+        - anomaly_history
+    rl_adaptation:
+      enabled: true
+      scope:
+        - threshold_calibration
+        - sensitivity_tuning
+      forbidden:
+        - policy_modification
+        - semantic_redefinition
+        - agent_role_change
+
+  policy:
+    enabled: true
+    role: governance_and_compliance
+    deterministic: true
+    policy_as_code: true
+    sources:
+      - GDPR
+      - HIPAA
+      - PCI_DSS
+      - CUSTOM
+    decisions:
+      - ALLOW
+      - MASK
+      - REDACT
+      - ENCRYPT
+      - QUARANTINE
+      - ALERT
+
+  audit:
+    enabled: true
+    role: immutable_provenance
+    immutability: true
+    tamper_evident: true
+    replay_support: true
+    logs:
+      fields:
+        - input_hash
+        - agent_chain
+        - model_version
+        - policy_version
+        - risk_score
+        - decision
+        - timestamp
+
+# ------------------------------------------------------------
+# TRAINING CONFIGURATION
+# ------------------------------------------------------------
+training:
+  enabled: true
+
+  ner_models:
+    enabled: true
+    frameworks: [PyTorch, JAX]
+    privacy_preserving: true
+
+  embeddings:
+    enabled: true
+    methods:
+      - contrastive_learning
+      - semantic_similarity
+
+  rl:
+    enabled: true
+    scope: risk_calibration_only
+
+  experiment_tracking:
+    enabled: true
+    reproducible: true
+
+# ------------------------------------------------------------
+# SECURITY MODEL
+# ------------------------------------------------------------
+security:
+  zero_trust_agents: true
+  input_sanitization: true
+  prompt_injection_defense: true
+  semantic_spoofing_detection: true
+  data_poisoning_detection: true
+
+# ------------------------------------------------------------
+# GOVERNANCE & SAFETY
+# ------------------------------------------------------------
+governance:
+  provenance_tracking: true
+
+  model_registry:
+    signed_models_only: true
+    versioned: true
+
+  policy_registry:
+    signed_policies_only: true
+    versioned: true
+
+  kill_switch:
+    enabled: true
+    levels:
+      - agent
+      - pipeline
+      - global
+    authorization:
+      admin_key_required: true
+      emergency_override: true
+    audit_on_activation: true
+
+# ------------------------------------------------------------
+# OBSERVABILITY
+# ------------------------------------------------------------
+observability:
+  metrics:
+    agent_health: true
+    latency: true
+    confidence_drift: true
+    false_positive_rate: true
+  tracing:
+    enabled: true
+    cross_agent: true
+  logging:
+    structured: true
+    retention: policy_defined
+
+# ------------------------------------------------------------
+# INTEGRATIONS
+# ------------------------------------------------------------
+integration:
+
+  reva4:
+    enabled: true
+    mode: intelligence_signals_only
+    emits:
+      - risk_vectors
+      - semantic_anomalies
+      - drift_alerts
+    forbidden:
+      - behavior_selection
+      - lora_control
+      - action_execution
+
+  external:
+    siem: optional
+    dlp: optional
+    data_lakes: optional
+    api_gateways: optional
+
+# ------------------------------------------------------------
+# DEPLOYMENT MODES
+# ------------------------------------------------------------
+deployment:
+  modes:
+    - batch
+    - streaming
+    - inline_api
+    - forensic_replay
+  environments:
+    - dev
+    - staging
+    - production
+    - air_gapped
+
+# ------------------------------------------------------------
+# FAILURE HANDLING
+# ------------------------------------------------------------
+failure_handling:
+  graceful_degradation: true
+  partial_pipeline_isolation: true
+  audit_preserved_on_failure: true
+
+# ------------------------------------------------------------
+# HARD ASSERTIONS (NON-NEGOTIABLE)
+# ------------------------------------------------------------
+assertions:
+  - "NDRA-PII must never persist personal identity"
+  - "All decisions must be explainable and auditable"
+  - "Policies cannot be modified by learning systems"
+  - "System must remain killable at all times"
+  - "Intelligence must remain reversible"
