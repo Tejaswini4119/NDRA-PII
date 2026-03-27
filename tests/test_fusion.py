@@ -59,5 +59,35 @@ class TestFusionAgent(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].text_value, "Lohn")
 
+    def test_cross_chunk_fusion(self):
+        from schemas.core_models import ClassifiedChunk
+        
+        c1 = ClassifiedChunk(
+            document_id="doc1",
+            processed_text="Hello John",
+            original_text="Hello John",
+            page_number=1,
+            token_span=(0, 2)
+        )
+        c1.detected_entities = [self.create_entity("John", 6, 10, type="PERSON")]
+        
+        c2 = ClassifiedChunk(
+            document_id="doc1",
+            processed_text="Doe how are you",
+            original_text="Doe how are you",
+            page_number=1,
+            token_span=(2, 6)
+        )
+        c2.detected_entities = [self.create_entity("Doe", 0, 3, type="PERSON")]
+        
+        result = self.agent.fuse_cross_chunks([c1, c2])
+        
+        e1 = result[0].detected_entities[0]
+        e2 = result[1].detected_entities[0]
+        
+        self.assertEqual(e1.text_value, "John Doe")
+        self.assertEqual(e2.text_value, "John Doe")
+        self.assertGreater(e1.score, 0.9)
+
 if __name__ == '__main__':
     unittest.main()

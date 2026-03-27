@@ -59,39 +59,46 @@ def run_interactive():
            full_redacted_text = []
            print(f"[2] Analyzing for PII...")
            
+           # Classification Stage
+           classified_chunks = []
            for chunk in chunks:
                classified = classifier.process(chunk)
-               
-               # Fusion
+               # Intra-chunk Fusion
                classified = fusion_agent.fuse_chunk(classified)
+               classified_chunks.append(classified)
                
+           # Cross-Chunk Fusion
+           fused_chunks = fusion_agent.fuse_cross_chunks(classified_chunks)
+           
+           # Policy & Redaction Stage
+           for final_chunk in fused_chunks:
                # Policy
-               governed = policy_agent.evaluate_chunk(classified, trace_id="cli_trace")
+               governed = policy_agent.evaluate_chunk(final_chunk, trace_id="cli_trace")
                
                # Redaction
-               final_chunk = redaction_agent.redact(governed)
-               full_redacted_text.append(final_chunk.redacted_text)
+               redacted_chunk = redaction_agent.redact(governed)
+               full_redacted_text.append(redacted_chunk.redacted_text)
                
-               if final_chunk.detected_entities:
-                   pii_count += len(final_chunk.detected_entities)
+               if redacted_chunk.detected_entities:
+                   pii_count += len(redacted_chunk.detected_entities)
                    
                    # Print Decision
-                   if final_chunk.decision.action != "Allow" or final_chunk.decision.risk_score > 0:
-                        print(f"    [POLICY] Action: {final_chunk.decision.action} | Risk: {final_chunk.decision.risk_score}")
-                        for trace in final_chunk.decision.justification_trace:
+                   if redacted_chunk.decision.action != "Allow" or redacted_chunk.decision.risk_score > 0:
+                        print(f"    [POLICY] Action: {redacted_chunk.decision.action} | Risk: {redacted_chunk.decision.risk_score}")
+                        for trace in redacted_chunk.decision.justification_trace:
                             print(f"      - {trace}")
                         
                         # Show snippet of redacted text if Redacted
-                        if final_chunk.decision.action == "Redact":
-                            snippet = final_chunk.redacted_text[:100].replace("\n", " ") + "..."
+                        if redacted_chunk.decision.action == "Redact":
+                            snippet = redacted_chunk.redacted_text[:100].replace("\n", " ") + "..."
                             print(f"    [REDACTED PREVIEW] {snippet}")
 
-                   for pii in final_chunk.detected_entities:
+                   for pii in redacted_chunk.detected_entities:
                         loc = f"Page {pii.location.page_number} [{pii.location.char_start_on_page}:{pii.location.char_end_on_page}]" if pii.location else ""
                         safe_text = pii.text_value.encode('ascii', 'ignore').decode('ascii')
                         
                         # If redacted, mask the display here too
-                        if final_chunk.decision.action == "Redact":
+                        if redacted_chunk.decision.action == "Redact":
                             safe_text = f"[{pii.entity_type}]"
                             
                         print(f"    -> [{pii.entity_type}] '{safe_text}' (Score: {pii.score:.2f}) @ {loc}")

@@ -1,0 +1,30 @@
+# =====================================================
+# AGX SYSTEM CONFIGURATION
+# Platform Bootstrap (Project-Level)
+# =====================================================
+
+agx:
+  runtime: v1
+
+  # Enforce strict isolation and determinism
+  sandbox: strict
+  determinism: enforced
+
+  # Disallow shared memory across agents
+  isolation:
+    shared_memory: false
+    message_only_ipc: true
+
+  # Safety defaults
+  safety:
+    fail_closed_on_error: true
+    kill_switch_enabled: true
+
+  # Observability baseline
+  observability:
+    execution_tracing: true
+    audit_passthrough: true
+
+  # Include application-level intelligence contract
+  includes:
+    - ../config/ndra-pii.antigravity.yml

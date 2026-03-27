@@ -1,0 +1,5 @@
+fastapi
+chromadb
+uvicorn
+opentelemetry-instrumentation-fastapi
+setuptools

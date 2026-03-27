@@ -112,35 +112,41 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
         # 1. Extraction
         chunks = extractor.process(file_path)
         
-        # 2. Classification & Fusion & Governance & Redaction
+        # 2. Classification & Fusion
+        classified_chunks = []
+        for chunk in chunks:
+            classified = classifier.process(chunk)
+            # Apply Intra-Chunk Fusion
+            classified = fusion_agent.fuse_chunk(classified)
+            classified_chunks.append(classified)
+            
+        # 3. Cross-Chunk Fusion
+        fused_chunks = fusion_agent.fuse_cross_chunks(classified_chunks)
+        
+        # 4. Governance & Redaction
         pii_summaries = []
         policy_traces = []
         total_pii = 0
         
-        for chunk in chunks:
-            classified = classifier.process(chunk)
-            
-            # Apply Fusion
-            classified = fusion_agent.fuse_chunk(classified)
-            
+        for final_chunk in fused_chunks:
             # Apply Policy
-            governed = policy_agent.evaluate_chunk(classified, trace_id)
+            governed = policy_agent.evaluate_chunk(final_chunk, trace_id)
             
             # Apply Redaction
-            final_chunk = redaction_agent.redact(governed)
+            redacted_chunk = redaction_agent.redact(governed)
             
             # Collect Policy Decisions
-            if final_chunk.decision.action != "Allow" or final_chunk.decision.risk_score > 0:
+            if redacted_chunk.decision.action != "Allow" or redacted_chunk.decision.risk_score > 0:
                  policy_traces.append(PolicyTrace(
-                     chunk_id=final_chunk.chunk_id,
-                     action=final_chunk.decision.action,
-                     risk_score=final_chunk.decision.risk_score,
-                     details=final_chunk.decision.justification_trace
+                     chunk_id=redacted_chunk.chunk_id,
+                     action=redacted_chunk.decision.action,
+                     risk_score=redacted_chunk.decision.risk_score,
+                     details=redacted_chunk.decision.justification_trace
                  ))
 
-            if final_chunk.detected_entities:
-                total_pii += len(final_chunk.detected_entities)
-                for pii in final_chunk.detected_entities:
+            if redacted_chunk.detected_entities:
+                total_pii += len(redacted_chunk.detected_entities)
+                for pii in redacted_chunk.detected_entities:
                     # Format Location
                     loc_str = "N/A"
                     if pii.location:
@@ -149,7 +155,7 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
                     # Decide on text preview
                     # If Action was Redact, we should probably mask the preview too for safety
                     preview = pii.text_value
-                    if final_chunk.decision.action == "Redact":
+                    if redacted_chunk.decision.action == "Redact":
                         preview = f"[{pii.entity_type}]"
 
                     pii_summaries.append(PIISummary(

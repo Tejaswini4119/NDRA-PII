@@ -89,3 +89,51 @@ class FusionAgent:
         # Recalculate density if needed, though usually semantic density is about token coverage.
         # But simple count might have changed.
         return chunk
+
+    def fuse_cross_chunks(self, chunks: List[ClassifiedChunk]) -> List[ClassifiedChunk]:
+        """
+        Resolves entities split cleanly across chunk boundaries.
+        Processes chunks sequentially and links trailing entities of chunk_a 
+        with leading entities of chunk_b.
+        """
+        if not chunks or len(chunks) < 2:
+            return chunks
+
+        for i in range(len(chunks) - 1):
+            chunk_a = chunks[i]
+            chunk_b = chunks[i+1]
+            
+            if not chunk_a.detected_entities or not chunk_b.detected_entities:
+                continue
+                
+            # Sort entities by position
+            a_entities = sorted(chunk_a.detected_entities, key=lambda e: e.start_index)
+            b_entities = sorted(chunk_b.detected_entities, key=lambda e: e.start_index)
+            
+            # Trailing entity in Chunk A
+            trailing_a = a_entities[-1]
+            # Leading entity in Chunk B
+            leading_b = b_entities[0]
+            
+            # Check proximity to boundaries
+            chunk_a_len = len(chunk_a.processed_text)
+            
+            # Define proximity threshold (e.g. 10 chars from boundary to account for whitespace/punctuation)
+            a_proximity = chunk_a_len - trailing_a.end_index
+            b_proximity = leading_b.start_index
+            
+            if a_proximity <= 10 and b_proximity <= 10:
+                if trailing_a.entity_type == leading_b.entity_type:
+                    # Link them (Option B)
+                    combined_text = trailing_a.text_value + " " + leading_b.text_value
+                    
+                    # Update text_value so Policy considers the combined string
+                    trailing_a.text_value = combined_text.strip()
+                    leading_b.text_value = combined_text.strip()
+                    
+                    # Boost score slightly to reflect combined confidence
+                    max_score = max(trailing_a.score, leading_b.score)
+                    trailing_a.score = min(max_score + 0.1, 1.0)
+                    leading_b.score = min(max_score + 0.1, 1.0)
+
+        return chunks
