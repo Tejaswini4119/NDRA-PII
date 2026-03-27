@@ -2,9 +2,9 @@
 
 **Enterprise-Grade Privacy Intelligence System**
 
-[![Status](https://img.shields.io/badge/Status-Operational-brightgreen)]()
+[![Status](https://img.shields.io/badge/Status-Operational-darkgreen)]()
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)]()
-[![License](https://img.shields.io/badge/License-Proprietary-red)]()
+[![License](https://img.shields.io/badge/License-GPLv3-red)](LICENSE)
 
 ## Overview
 
@@ -96,4 +96,7 @@ python -m unittest discover tests
 ```
 
 ## Authors
-- **Tejaswini** - *Lead Developer*
+- **Tejaswini** - *Lead, Applied Intelligence & Data Semantics Engineer - NDRA Intelligence Systems*
+- **Pardhu Sree Rushi Varma** - *Core Architecture, Security & Governance Engineer - NDRA Governance Systems*
+- **Rupa Yeshvitha Karedla** -  *Dataset Management & Preprocessing Engineer - NDRA Data-Pipelines*
+
