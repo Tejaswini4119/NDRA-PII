@@ -7,6 +7,8 @@ import os
 import uuid
 from typing import List, Optional
 
+from prometheus_client import make_asgi_app, Counter
+
 # Core Agents
 from agents.audit import AuditAgent
 # Core Agents
@@ -39,6 +41,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Prometheus Metrics ---
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+PII_FILES_PROCESSED = Counter("ndrapii_files_processed_total", "Total documents processed", ["status"])
+PII_POLICY_ACTIONS = Counter("ndrapii_policy_actions_total", "Actions taken by Policy Agent", ["action", "entity_type"])
 
 # --- Schemas ---
 class PIISummary(BaseModel):
@@ -147,6 +156,12 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
             if redacted_chunk.detected_entities:
                 total_pii += len(redacted_chunk.detected_entities)
                 for pii in redacted_chunk.detected_entities:
+                    # Export Metric: Policy decision per actual entity
+                    PII_POLICY_ACTIONS.labels(
+                        action=redacted_chunk.decision.action, 
+                        entity_type=pii.entity_type
+                    ).inc()
+
                     # Format Location
                     loc_str = "N/A"
                     if pii.location:
@@ -173,6 +188,8 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
             "trace_id": trace_id
         })
         
+        PII_FILES_PROCESSED.labels(status="success").inc()
+        
         return AnalysisResult(
             filename=filename,
             status="processed",
@@ -184,6 +201,7 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
         )
         
     except Exception as e:
+        PII_FILES_PROCESSED.labels(status="failed").inc()
         audit_agent.log_event("PIPELINE_ERROR", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Pipeline Error: {str(e)}")
 

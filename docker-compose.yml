@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: ndra-pii-api
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+      - ./quarantine:/app/quarantine
+      - audit_logs:/app/audit.log
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ndra-prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ndra-grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+volumes:
+  audit_logs:
