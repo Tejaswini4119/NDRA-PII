@@ -183,4 +183,4 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
