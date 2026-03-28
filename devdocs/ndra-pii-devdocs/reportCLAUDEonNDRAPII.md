@@ -163,18 +163,79 @@ A deeper review of the remaining codebase logic (agents, rules engine, async lay
 
 ---
 
-## 8. Recommended Next Steps (Version 2 Roadmap)
+## 8. Third-Pass Review Findings
 
-1. **Authentication & Authorization** — Add API-key or JWT-based authentication to all endpoints. The `/analyze/upload` and `/analyze/path` endpoints currently have no auth layer.
-2. **Rate Limiting** — Integrate `slowapi` or an API gateway to prevent brute-force and denial-of-service attacks.
-3. **Document-Level Escalation Rules** — Implement `evaluate_document()` in `PolicyAgent` to evaluate `CONTEXT_MATCH` rules (density, toxic combinations, jurisdiction) at the document level after all chunk-level processing is complete.
-4. **OCR Integration** — The `_read_image()` stub (PaddleOCR TODO) should be completed to enable PII detection in scanned documents and images.
-5. **Structured Logging / SIEM Export** — Replace `logging.basicConfig` with a JSON formatter (e.g., `python-json-logger`) so logs can be ingested by ELK, Splunk, or a cloud SIEM.
-6. **Audit Log Integrity Verification** — Add a `/audit/verify` endpoint or offline CLI tool that walks the entire JSONL chain and confirms each `prev_hash` links correctly to the previous entry.
-7. **Secrets Management** — Move API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`) and the Grafana password out of `.env` files and into a secrets manager (HashiCorp Vault, AWS Secrets Manager, etc.) for production.
-8. **Dependency Pinning** — `requirements.txt` uses unpinned package names. Pin all versions in `requirements.lock` and periodically audit for CVEs.
+A focused review of the Version 2 Roadmap items revealed six additional issues — four of which were critical functional or security gaps, two of which were correctness bugs.
+
+### 8.1 Document-Level CONTEXT_MATCH Rules Completely Non-Functional *(CRITICAL — FIXED)*
+
+**File:** `agents/policy_agent.py`  
+**Finding:** Pass 2 correctly disabled CONTEXT_MATCH conditions at the entity level (finding 13), but this left the highest-priority rules in the entire system (`ESC-DENSITY-EXTREME-001` priority 200, `ESC-TOXIC-ID-HEALTH-001` priority 150, `ESC-TOXIC-ID-FIN-001` priority 150, `JUR-GDPR-001` priority 150) completely unevaluated. A document containing 100 SSNs and credit cards, or a healthcare record linking an Aadhaar number to a diagnosis code, would receive no escalation — the toxic combination rules simply never fired.  
+**Fix Applied:** Added three new methods to `PolicyAgent`:
+
+- `_build_document_context(chunks, jurisdiction)` — aggregates total PII count and presence of gov-ID, healthcare, and financial entity types across all chunks into a context dict.
+- `_check_context_conditions(doc_context, rule)` — evaluates rules with exclusively `CONTEXT_MATCH` conditions against the document context.
+- `evaluate_document(chunks, trace_id, jurisdiction)` — the document-level evaluation entry point; called from `_run_pipeline` after all per-chunk processing.
+
+Also added module-level entity type classification constants (`_GOV_ID_ENTITY_TYPES`, `_HEALTHCARE_ENTITY_TYPES`, `_FINANCIAL_ENTITY_TYPES`) that map Presidio / custom entity names to the document-context boolean fields used by the escalation rules.
+
+The result is surfaced to callers via a new `document_risk` field on `AnalysisResult`.
+
+### 8.2 No Authentication on Any Endpoint *(HIGH — FIXED)*
+
+**File:** `main.py`, `config/settings.py`  
+**Finding:** Every `/analyze/*` endpoint was completely unauthenticated. Any party with network access could upload arbitrary files and retrieve PII analysis results — a critical exposure for a system designed to process sensitive personal data.  
+**Fix Applied:** Added `API_KEY` setting to `NDRAConfig`. A FastAPI `Security` dependency (`_require_api_key`) validates the `X-API-Key` request header against the configured key, returning HTTP 401 on mismatch. Both `/analyze/upload` and `/analyze/path` endpoints and the new `/audit/verify` endpoint are protected. When `API_KEY` is not set (default), the dependency is a no-op — preserving zero-configuration for local development.
+
+### 8.3 No Rate Limiting *(MEDIUM — FIXED)*
+
+**File:** `main.py`, `config/settings.py`  
+**Finding:** No rate limiting was applied to any endpoint. A single client could flood the `/analyze/upload` endpoint with large files, exhausting CPU and disk resources.  
+**Fix Applied:** Implemented `_RateLimitMiddleware` — a per-IP sliding-window rate limiter that requires no external dependencies. Each client IP is allowed at most `RATE_LIMIT_PER_MINUTE` (default 60) requests in any 60-second rolling window. Requests exceeding the limit receive HTTP 429. CORS preflight (OPTIONS) requests and non-`/analyze/*` paths are exempt. Rate limiting is disabled when `RATE_LIMIT_PER_MINUTE=0`.
+
+### 8.4 Plain-Text Logging Blocks SIEM Ingestion *(MEDIUM — FIXED)*
+
+**File:** `agents/base.py`  
+**Finding:** `logging.basicConfig(format='%(asctime)s - ...')` emitted human-readable plain text. Log shippers (Fluentd, Filebeat, etc.) cannot reliably parse unstructured text, making it impossible to ingest NDRA-PII logs into ELK, Splunk, or any cloud SIEM without custom parsing rules.  
+**Fix Applied:** Replaced `logging.basicConfig` with a `_JsonFormatter` that emits each record as a single-line JSON object with `timestamp`, `level`, `logger`, `message`, and optional `exception` / `stack_info` fields. A `_configure_logging()` function installs the handler on the root logger at import time but is a no-op when handlers are already present (e.g., under pytest or uvicorn), preventing double-handler issues.
+
+### 8.5 No Audit Chain Verification Endpoint *(MEDIUM — FIXED)*
+
+**Files:** `agents/audit.py`, `main.py`  
+**Finding:** The tamper-evident SHA-256 hash chain was designed but never verifiable. There was no way to confirm the chain had not been corrupted after a security incident or storage failure. The "tamper-evident" property was entirely theoretical.  
+**Fix Applied:** Added `AuditAgent.verify_chain()` — walks every line of the audit log, recomputes each entry's SHA-256 hash, and verifies that each entry's `prev_hash` correctly links to the preceding entry's stored hash. Returns `{"valid": bool, "entries_verified": int, "first_broken_at": int|None, "error": str|None}`. Exposed via `GET /audit/verify` (protected by API key). Returns HTTP 409 Conflict when the chain is broken, which callers should treat as a security incident.
+
+### 8.6 `_run_pipeline` Swallows `HTTPException` *(LOW — FIXED)*
+
+**File:** `main.py`  
+**Finding:** The `except Exception as e` block at the bottom of `_run_pipeline` caught all exceptions including `HTTPException` objects raised within the pipeline (e.g., from a sub-function raising HTTP 403 or 404), wrapped them in a new generic HTTP 500 error, and discarded the original status code and detail. Any meaningful HTTP error raised inside the pipeline was silently converted to an uninformative 500.  
+**Fix Applied:** Added `except HTTPException: raise` before the generic `except Exception` clause, identical to the pattern already used in the upload handler above it.
 
 ---
 
-**Report Status:** Complete (Pass 1 + Pass 2)  
+## 9. Summary Table — Pass 3
+
+| # | Severity | File | Finding | Status |
+|---|----------|------|---------|--------|
+| 18 | CRITICAL | `policy_agent.py` | Document-level CONTEXT_MATCH escalation rules entirely unevaluated | ✅ Fixed |
+| 19 | HIGH | `main.py` / `settings.py` | No authentication on any endpoint | ✅ Fixed |
+| 20 | MEDIUM | `main.py` / `settings.py` | No rate limiting — DoS via upload flood | ✅ Fixed |
+| 21 | MEDIUM | `agents/base.py` | Plain-text logging blocks SIEM ingestion | ✅ Fixed |
+| 22 | MEDIUM | `audit.py` / `main.py` | No audit chain verification — tamper-evidence theoretical only | ✅ Fixed |
+| 23 | LOW | `main.py` | `_run_pipeline` swallows `HTTPException` — converts meaningful errors to HTTP 500 | ✅ Fixed |
+
+---
+
+## 10. Remaining Roadmap (Version 2)
+
+1. **OCR Integration** — The `_read_image()` stub (PaddleOCR TODO) should be completed to enable PII detection in scanned documents and images.
+2. **Mixed Condition Rules** — Rules that combine `PII_MATCH` and `CONTEXT_MATCH` conditions in the same rule are currently skipped by both evaluators. A combined evaluation tier needs to be designed.
+3. **Jurisdiction Context from API** — The `jurisdiction` parameter in `evaluate_document()` is never set from the API layer. A query parameter on `/analyze/upload` would allow callers to declare the document's jurisdiction and enable `JUR-GDPR-001` and similar rules.
+4. **Secrets Management** — Move `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `API_KEY` out of `.env` files and into HashiCorp Vault, AWS Secrets Manager, or equivalent for production.
+5. **Structured Logging / SIEM Export (further)** — Add correlation IDs and request trace IDs to every log record for end-to-end tracing across agents.
+6. **Dependency Pinning** — `requirements.txt` is unpinned. Pin all versions in `requirements.lock` (already exists) and add automated CVE scanning via Dependabot or `pip-audit`.
+
+---
+
+**Report Status:** Complete (Pass 1 + Pass 2 + Pass 3)  
 **Generated By:** Claude Architectural Review  

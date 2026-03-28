@@ -1,11 +1,18 @@
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 import asyncio
+import collections
 import os
+import time
+import threading
 import uuid
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from prometheus_client import make_asgi_app, Counter
 
@@ -32,13 +39,103 @@ app = FastAPI(
     description="Neuro-Semantic Distributed Risk Analysis for Personally Identifiable Information (NDRA-PII)"
 )
 
-# Enable CORS — origins are controlled via settings (never use "*" in production)
+# ---------------------------------------------------------------------------
+# Rate-limit middleware (per-IP sliding window, no external dependencies)
+# ---------------------------------------------------------------------------
+
+class _RateLimitMiddleware(BaseHTTPMiddleware):
+    """Per-IP sliding-window rate limiter applied to /analyze/* endpoints.
+
+    Each client IP is allowed at most ``requests_per_minute`` requests in any
+    60-second rolling window.  Requests that exceed the limit receive HTTP 429.
+    CORS preflight (OPTIONS) requests are exempt.  Rate limiting is disabled
+    when ``requests_per_minute`` is 0.
+    """
+
+    def __init__(self, app, requests_per_minute: int = 60) -> None:
+        super().__init__(app)
+        self.rpm = requests_per_minute
+        self._window = 60.0
+        # Per-IP deque of recent request timestamps (monotonic seconds)
+        self._requests: Dict[str, collections.deque] = collections.defaultdict(collections.deque)
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _client_ip(request: Request) -> str:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+        return request.client.host if request.client else "unknown"
+
+    async def dispatch(self, request: Request, call_next):
+        # Only rate-limit /analyze/* ; skip CORS preflight and disabled limiter
+        if (
+            self.rpm == 0
+            or not request.url.path.startswith("/analyze")
+            or request.method == "OPTIONS"
+        ):
+            return await call_next(request)
+
+        client_ip = self._client_ip(request)
+        now = time.monotonic()
+        cutoff = now - self._window
+
+        with self._lock:
+            timestamps = self._requests[client_ip]
+            # Evict entries outside the sliding window
+            while timestamps and timestamps[0] < cutoff:
+                timestamps.popleft()
+            if len(timestamps) >= self.rpm:
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "detail": (
+                            f"Rate limit exceeded. "
+                            f"Maximum {self.rpm} requests per minute per IP."
+                        )
+                    },
+                )
+            timestamps.append(now)
+
+        return await call_next(request)
+
+
+# Register middlewares.  In Starlette, the LAST-registered middleware is
+# the outermost (first to receive requests).  Register CORS last so it
+# is outermost and handles preflight before the rate limiter.
+app.add_middleware(
+    _RateLimitMiddleware,
+    requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
+
+# ---------------------------------------------------------------------------
+# API key authentication dependency
+# ---------------------------------------------------------------------------
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def _require_api_key(api_key: Optional[str] = Security(_api_key_header)) -> None:
+    """FastAPI dependency that enforces the API key when one is configured.
+
+    When ``settings.API_KEY`` is None or empty the dependency is a no-op,
+    allowing unauthenticated access in development.  In production, set
+    ``API_KEY`` in the environment and every /analyze/* and /audit/* request
+    must include the ``X-API-Key`` header.
+    """
+    if settings.API_KEY and api_key != settings.API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Set the X-API-Key request header.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
 
 # --- Prometheus Metrics ---
 metrics_app = make_asgi_app()
@@ -60,6 +157,14 @@ class PolicyTrace(BaseModel):
     risk_score: float
     details: List[str]
 
+class DocumentRisk(BaseModel):
+    """Document-level risk escalation result from CONTEXT_MATCH rule evaluation."""
+    escalated: bool
+    risk_score: float
+    severity: str
+    rules_fired: List[str]
+    justifications: List[str]
+
 class AnalysisResult(BaseModel):
     filename: str
     status: str
@@ -67,6 +172,7 @@ class AnalysisResult(BaseModel):
     pii_detected_count: int
     pii_details: List[PIISummary] = []
     policy_decisions: List[PolicyTrace] = []
+    document_risk: Optional[DocumentRisk] = None
     trace_id: str
 
 # --- Endpoints ---
@@ -79,7 +185,7 @@ def health_check():
         "agents": ["Audit", "Extractor", "Classifier", "Fusion", "Policy", "Redaction"]
     }
 
-@app.post("/analyze/upload", response_model=AnalysisResult)
+@app.post("/analyze/upload", response_model=AnalysisResult, dependencies=[Depends(_require_api_key)])
 async def analyze_file_upload(file: UploadFile = File(...)):
     """
     Real-time Upload & Analysis.
@@ -129,7 +235,7 @@ async def analyze_file_upload(file: UploadFile = File(...)):
         audit_agent.log_event("UPLOAD_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/analyze/path", response_model=AnalysisResult)
+@app.post("/analyze/path", response_model=AnalysisResult, dependencies=[Depends(_require_api_key)])
 async def analyze_local_path(file_path: str):
     """
     Analyze a file already on the server/local disk.
@@ -159,6 +265,25 @@ async def analyze_local_path(file_path: str):
 
     trace_id = str(uuid.uuid4())
     return await asyncio.to_thread(_run_pipeline, resolved, os.path.basename(resolved), trace_id)
+
+@app.get("/audit/verify", dependencies=[Depends(_require_api_key)])
+def audit_verify():
+    """Verify the integrity of the tamper-evident audit log hash chain.
+
+    Walks every entry in the audit log, recomputes each SHA-256 hash, and
+    confirms that the ``prev_hash`` field in each entry correctly links to the
+    hash of the preceding entry.  Returns the verification result without
+    exposing any audit log content.
+    """
+    result = audit_agent.verify_chain()
+    if not result["valid"]:
+        # Return 409 Conflict to signal chain corruption — callers should
+        # treat this as a security incident requiring investigation.
+        raise HTTPException(
+            status_code=409,
+            detail=result,
+        )
+    return result
 
 def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResult:
     """Helper to run Extractor -> Classifier -> Fusion -> Policy -> Redaction pipeline."""
@@ -225,11 +350,23 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
                         location_str=loc_str
                     ))
         
-        # 3. Audit
+        # 5. Document-level escalation evaluation (CONTEXT_MATCH rules)
+        # Runs after all per-chunk governance so the full PII inventory is known.
+        doc_esc = policy_agent.evaluate_document(fused_chunks, trace_id=trace_id)
+        document_risk = DocumentRisk(
+            escalated=doc_esc["escalated"],
+            risk_score=doc_esc["risk_score"],
+            severity=doc_esc["severity"],
+            rules_fired=doc_esc["rules_fired"],
+            justifications=doc_esc["justifications"],
+        )
+
+        # 6. Audit
         audit_agent.log_event("ANALYSIS_COMPLETE", {
             "file": filename,
             "pii_count": total_pii,
             "decisions": len(policy_traces),
+            "doc_escalated": doc_esc["escalated"],
             "trace_id": trace_id
         })
         
@@ -242,9 +379,14 @@ def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResul
             pii_detected_count=total_pii,
             pii_details=pii_summaries,
             policy_decisions=policy_traces,
+            document_risk=document_risk,
             trace_id=trace_id
         )
         
+    except HTTPException:
+        # Re-raise FastAPI/HTTP errors without wrapping them in a 500 — they
+        # carry a meaningful status code (e.g. 404, 403) that must reach the caller.
+        raise
     except Exception as e:
         PII_FILES_PROCESSED.labels(status="failed").inc()
         audit_agent.log_event("PIPELINE_ERROR", {"error": str(e)})

@@ -98,3 +98,102 @@ class AuditAgent(NDRAAgent):
 
         self.logger.info(f"Audit Logged: {curr_hash[:8]}...")
         return entry
+
+    def verify_chain(self) -> Dict[str, Any]:
+        """Walk the entire audit log and verify the SHA-256 hash chain.
+
+        Each entry's ``prev_hash`` must equal the hash stored in the
+        preceding entry.  The hash of each entry's ``payload`` is also
+        recomputed and compared against the stored ``hash`` field to detect
+        tampering.
+
+        Returns:
+            A dict with the following keys:
+
+            * ``valid`` (bool) — True if the entire chain is intact.
+            * ``entries_verified`` (int) — Number of entries successfully
+              verified before any failure (or the total if fully valid).
+            * ``first_broken_at`` (int | None) — 1-based line number of the
+              first broken entry, or None if the chain is intact.
+            * ``error`` (str | None) — Human-readable description of the
+              failure, or None if valid.
+        """
+        if not os.path.exists(self.log_file):
+            return {
+                "valid": True,
+                "entries_verified": 0,
+                "first_broken_at": None,
+                "error": None,
+            }
+
+        try:
+            prev_hash = "0" * 64
+            entries_verified = 0
+
+            with open(self.log_file, "r", encoding="utf-8") as f:
+                for line_num, raw_line in enumerate(f, start=1):
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        return {
+                            "valid": False,
+                            "entries_verified": entries_verified,
+                            "first_broken_at": line_num,
+                            "error": f"JSON parse error at line {line_num}: {exc}",
+                        }
+
+                    payload = entry.get("payload", {})
+
+                    # 1. Verify prev_hash link
+                    stored_prev = payload.get("prev_hash", "")
+                    if stored_prev != prev_hash:
+                        return {
+                            "valid": False,
+                            "entries_verified": entries_verified,
+                            "first_broken_at": line_num,
+                            "error": (
+                                f"Chain broken at entry {line_num}: "
+                                f"expected prev_hash={prev_hash[:16]}…, "
+                                f"got {stored_prev[:16]}…"
+                            ),
+                        }
+
+                    # 2. Recompute the entry hash and compare
+                    payload_str = json.dumps(payload, sort_keys=True)
+                    expected_hash = hashlib.sha256(
+                        payload_str.encode("utf-8")
+                    ).hexdigest()
+                    stored_hash = entry.get("hash", "")
+                    if stored_hash != expected_hash:
+                        return {
+                            "valid": False,
+                            "entries_verified": entries_verified,
+                            "first_broken_at": line_num,
+                            "error": (
+                                f"Hash mismatch at entry {line_num}: "
+                                f"stored={stored_hash[:16]}…, "
+                                f"recomputed={expected_hash[:16]}…"
+                            ),
+                        }
+
+                    prev_hash = stored_hash
+                    entries_verified += 1
+
+            return {
+                "valid": True,
+                "entries_verified": entries_verified,
+                "first_broken_at": None,
+                "error": None,
+            }
+
+        except Exception as exc:
+            return {
+                "valid": False,
+                "entries_verified": 0,
+                "first_broken_at": None,
+                "error": str(exc),
+            }

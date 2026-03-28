@@ -51,6 +51,16 @@ class NDRAConfig(BaseSettings):
     # Leave empty (default) to disable the endpoint entirely (recommended for production).
     ALLOWED_PATH_PREFIXES: List[str] = []
 
+    # API key for protecting /analyze/* and /audit/* endpoints.
+    # When set, every request to those endpoints must include the header:
+    #   X-API-Key: <value>
+    # Leave unset (default) to disable auth (only for local development).
+    API_KEY: Optional[str] = None
+
+    # Maximum number of /analyze/* requests per minute per IP address.
+    # Set to 0 to disable rate limiting.
+    RATE_LIMIT_PER_MINUTE: int = 60
+
     class Config:
         env_file = ".env"
 
