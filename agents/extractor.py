@@ -12,6 +12,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 import logging
+import tempfile
+import shutil
 
 # External libs
 from pypdf import PdfReader
@@ -77,11 +79,6 @@ class ExtractorAgent(NDRAAgent):
             # Email
             "message/rfc822": self._read_eml,
             "application/vnd.ms-outlook": self._read_msg,
-            
-            # Archive
-            "application/zip": self._read_archive_zip,
-            "application/x-tar": self._read_archive_tar,
-            "application/gzip": self._read_archive_tar,
         }
         
         # Extensions fallback if mime guessing fails or is generic
@@ -95,7 +92,11 @@ class ExtractorAgent(NDRAAgent):
             ".msg": "application/vnd.ms-outlook",
             ".eml": "message/rfc822",
             ".json": "application/json",
-            ".parquet": "application/octet-stream" # Needs specific handler
+            ".parquet": "application/octet-stream", # Needs specific handler
+            ".zip": "application/zip",
+            ".tar": "application/x-tar",
+            ".gz": "application/gzip",
+            ".tgz": "application/gzip"
         }
 
     def process(self, file_path: str, context: Dict[str, Any] = None) -> List[SemanticChunk]:
@@ -116,7 +117,11 @@ class ExtractorAgent(NDRAAgent):
         )
         self.log_event("DOCUMENT_RECEIVED", doc_meta.dict())
 
-        # 2. Select Handler or Quarantine
+        # 2. Process Archives Recursively
+        if mime_type in ["application/zip", "application/x-tar", "application/gzip"]:
+            return self._process_archive(path, mime_type)
+
+        # 3. Select Handler or Quarantine
         handler = self.handlers.get(mime_type)
         if not handler:
             self._quarantine_file(path, "Unsupported MIME type")
@@ -248,17 +253,47 @@ class ExtractorAgent(NDRAAgent):
             return [{"text": msg.body, "page": 1}]
         return [{"text": "[MSG Support Missing - Install extract-msg]", "page": 1}]
 
-    def _read_archive_zip(self, path: Path) -> List[Dict]:
-        # Returns list of files contained (Metadata), usually don't extract recursively in 'chunk' mode
-        # unless we treat archive as a folder. For now, list contents.
-        with zipfile.ZipFile(path, 'r') as z:
-            names = z.namelist()
-        return [{"text": f"Archive Contents ({path.name}):\n" + "\n".join(names), "page": 1}]
-
-    def _read_archive_tar(self, path: Path) -> List[Dict]:
-         with tarfile.open(path, 'r') as t:
-            names = t.getnames()
-         return [{"text": f"Archive Contents ({path.name}):\n" + "\n".join(names), "page": 1}]
+    def _process_archive(self, path: Path, mime_type: str) -> List[SemanticChunk]:
+        """Extracts archives to a temporary directory and recursively processes their contents."""
+        self.logger.info(f"Extracting archive: {path.name}")
+        all_chunks = []
+        
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                
+                if mime_type == "application/zip":
+                    with zipfile.ZipFile(path, 'r') as z:
+                        z.extractall(temp_path)
+                elif mime_type in ["application/x-tar", "application/gzip"]:
+                    mode = 'r:gz' if mime_type == "application/gzip" else 'r'
+                    with tarfile.open(path, mode) as t:
+                        t.extractall(temp_path)
+                        
+                # Recursively process all files inside the temporary directory
+                for root, _, files in os.walk(temp_path):
+                    for file_name in files:
+                        extracted_file_path = Path(root) / file_name
+                        # Only process actual files to prevent infinite loops on symlinks
+                        if extracted_file_path.is_file():
+                            self.logger.info(f"Processing extracted file: {file_name}")
+                            try:
+                                # Recursively call process on each enclosed file
+                                chunks = self.process(str(extracted_file_path))
+                                all_chunks.extend(chunks)
+                            except Exception as e:
+                                self.logger.error(f"Error processing extracted file {file_name}: {e}")
+                                # Continue processing other files
+                                
+        except Exception as e:
+            self.logger.error(f"Failed to process archive {path.name}: {e}")
+            self._quarantine_file(path, f"Archive Extraction Error: {str(e)}")
+            
+        self.log_event("ARCHIVE_EXTRACTION_COMPLETE", {
+            "file": path.name,
+            "chunks_yielded": len(all_chunks)
+        })
+        return all_chunks
 
     # --- Utils ---
     def _compute_sha256(self, file_path: Path) -> str:
