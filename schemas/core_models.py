@@ -1,7 +1,7 @@
 
 from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional, Dict, Any, Literal
-from datetime import datetime
+from datetime import UTC, datetime
 import uuid
 
 # --- Enums & Literals ---
@@ -15,7 +15,7 @@ class DocumentMetadata(BaseModel):
     file_size_bytes: int
     mime_type: str
     sha256_hash: str
-    upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    upload_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     page_count: Optional[int] = None
     language: Optional[str] = "en"
     source_channel: Optional[str] = "api"
@@ -23,7 +23,7 @@ class DocumentMetadata(BaseModel):
 class NDRAMessage(BaseModel):
     """Base message for inter-agent communication."""
     message_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     trace_id: str
 
 # --- 2. Chunk Schema ---
@@ -67,7 +67,7 @@ class AgentDecision(BaseModel):
     action: DECISION_ACTION
     risk_score: float
     justification_trace: List[str] # Rule trace: "Rule A fired -> Risk High -> Policy Block"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class GovernedChunk(ClassifiedChunk):
     """Final output chunk after policy enforcement."""
