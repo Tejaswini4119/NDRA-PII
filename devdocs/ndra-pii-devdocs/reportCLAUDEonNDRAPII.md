@@ -95,7 +95,7 @@ The NDRA-PII platform has a well-structured multi-agent pipeline and a clear sep
 
 ---
 
-## 5. Summary Table
+## 5. Summary Table — Pass 1
 
 | # | Severity | File | Finding | Status |
 |---|----------|------|---------|--------|
@@ -114,17 +114,67 @@ The NDRA-PII platform has a well-structured multi-agent pipeline and a clear sep
 
 ---
 
-## 6. Recommended Next Steps (Version 2 Roadmap)
+## 6. Second-Pass Review Findings
 
-1. **Authentication & Authorization** — Add API-key or JWT-based authentication to all endpoints. The `/analyze/upload` and `/analyze/path` endpoints currently have no auth layer.
-2. **Rate Limiting** — Integrate `slowapi` or an API gateway to prevent brute-force and denial-of-service attacks.
-3. **OCR Integration** — The `_read_image()` stub (PaddleOCR TODO) should be completed to enable PII detection in scanned documents and images.
-4. **Structured Logging / SIEM Export** — Replace `logging.basicConfig` with a JSON formatter (e.g., `python-json-logger`) so logs can be ingested by ELK, Splunk, or a cloud SIEM.
-5. **Audit Log Integrity Verification** — Add a `/audit/verify` endpoint or offline CLI tool that walks the entire JSONL chain and confirms each `prev_hash` links correctly to the previous entry.
-6. **Secrets Management** — Move API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`) and the Grafana password out of `.env` files and into a secrets manager (HashiCorp Vault, AWS Secrets Manager, etc.) for production.
-7. **Dependency Pinning** — `requirements.txt` uses unpinned package names. Pin all versions in `requirements.lock` and periodically audit for CVEs.
+A deeper review of the remaining codebase logic (agents, rules engine, async layer) revealed additional issues.
+
+### 6.1 CONTEXT_MATCH Conditions Silently Always True *(CRITICAL — FIXED)*
+
+**File:** `agents/policy_agent.py` → `_check_conditions()`  
+**Finding:** The condition-evaluation loop only had a branch for `cond.type == "PII_MATCH"`. Any condition with `type == "CONTEXT_MATCH"` (including the high-priority escalation rules for density, toxic combinations, and jurisdiction) fell through the `if` block without returning `False`, causing the outer loop to complete and `return True`. As a result, **every escalation rule fired on every entity in every document**, forcibly classifying all PII as CRITICAL risk and triggering maximum-severity redaction regardless of actual document context.  
+**Impact:** The `ESC-DENSITY-EXTREME-001` (priority 200), `ESC-TOXIC-ID-HEALTH-001` (priority 150), `ESC-TOXIC-ID-FIN-001` (priority 150), and `JUR-GDPR-001` (priority 150) rules — all of which are the **highest-priority rules in the system** — fired unconditionally, completely overriding the correctly calibrated `PII_MATCH` rules.  
+**Fix Applied:** `CONTEXT_MATCH` conditions now explicitly return `False` at the entity level, with a clear code comment explaining that these rules require document-level evaluation that is out of scope for the per-entity `_check_conditions` method. An additional `else` clause returns `False` for any other unknown condition type.
+
+### 6.2 Blocking Pipeline in Async FastAPI Handlers *(MEDIUM — FIXED)*
+
+**File:** `main.py` → `analyze_file_upload()`, `analyze_local_path()`  
+**Finding:** Both async endpoint handlers called `_run_pipeline()` — a fully synchronous, CPU and I/O bound function — directly without offloading to a thread pool. In FastAPI (Starlette), calling a blocking function from an `async def` handler blocks the underlying event loop, preventing all other concurrent requests from being processed until the pipeline completes. Under any meaningful load, this degrades to effectively single-threaded serial processing.  
+**Fix Applied:** Both call sites now use `await asyncio.to_thread(_run_pipeline, ...)` to execute the blocking pipeline in a thread-pool thread, freeing the event loop for other requests.
+
+### 6.3 `AuditAgent` Not Thread-Safe *(MEDIUM — FIXED)*
+
+**File:** `agents/audit.py`  
+**Finding:** `process()` read `self.last_hash`, computed a new hash based on it, updated `self.last_hash`, and then wrote to the log file — all without any synchronization. Under concurrent requests (which are now possible after Fix 6.2), two threads could read the same `last_hash` simultaneously, produce two entries both claiming the same `prev_hash`, and break the tamper-evident chain integrity.  
+**Fix Applied:** A `threading.Lock()` is acquired for the entire hash-read → hash-compute → hash-store → file-write sequence, making the chain update atomic.
+
+### 6.4 Unsafe `.decode()` on Potentially-`None` EML Payload *(LOW — FIXED)*
+
+**File:** `agents/extractor.py` → `_read_eml()`  
+**Finding:** `part.get_payload(decode=True).decode()` and `msg.get_payload(decode=True).decode()` would raise `AttributeError: 'NoneType' object has no attribute 'decode'` for EML messages whose payload is `None` (e.g., `multipart/mixed` container parts, `message/delivery-status`, or truncated messages). This would cause the extractor to silently quarantine valid email files.  
+**Fix Applied:** Added null checks before each `.decode()` call and used `.decode(errors="replace")` to handle any encoding issues gracefully.
+
+### 6.5 Unused Imports *(LOW — FIXED)*
+
+**Files:** `main.py`, `ndrapiicli.py`  
+**Finding:** `main.py` imported `shutil`, `BackgroundTasks`, and `Form` — none of which are used after the first-pass fixes. `ndrapiicli.py` imported `requests` which was never used (the CLI uses agents directly, not the HTTP API).  
+**Fix Applied:** All four unused imports removed.
 
 ---
 
-**Report Status:** Complete  
+## 7. Summary Table — Pass 2
+
+| # | Severity | File | Finding | Status |
+|---|----------|------|---------|--------|
+| 13 | CRITICAL | `policy_agent.py` | CONTEXT_MATCH conditions silently pass as True — escalation rules fire on all entities | ✅ Fixed |
+| 14 | MEDIUM | `main.py` | Blocking `_run_pipeline` in async handlers starves event loop | ✅ Fixed |
+| 15 | MEDIUM | `audit.py` | `last_hash` TOCTOU race condition under concurrent requests | ✅ Fixed |
+| 16 | LOW | `extractor.py` | Unsafe `.decode()` on potentially-None EML payload | ✅ Fixed |
+| 17 | LOW | `main.py` / `ndrapiicli.py` | Stale/unused imports | ✅ Fixed |
+
+---
+
+## 8. Recommended Next Steps (Version 2 Roadmap)
+
+1. **Authentication & Authorization** — Add API-key or JWT-based authentication to all endpoints. The `/analyze/upload` and `/analyze/path` endpoints currently have no auth layer.
+2. **Rate Limiting** — Integrate `slowapi` or an API gateway to prevent brute-force and denial-of-service attacks.
+3. **Document-Level Escalation Rules** — Implement `evaluate_document()` in `PolicyAgent` to evaluate `CONTEXT_MATCH` rules (density, toxic combinations, jurisdiction) at the document level after all chunk-level processing is complete.
+4. **OCR Integration** — The `_read_image()` stub (PaddleOCR TODO) should be completed to enable PII detection in scanned documents and images.
+5. **Structured Logging / SIEM Export** — Replace `logging.basicConfig` with a JSON formatter (e.g., `python-json-logger`) so logs can be ingested by ELK, Splunk, or a cloud SIEM.
+6. **Audit Log Integrity Verification** — Add a `/audit/verify` endpoint or offline CLI tool that walks the entire JSONL chain and confirms each `prev_hash` links correctly to the previous entry.
+7. **Secrets Management** — Move API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`) and the Grafana password out of `.env` files and into a secrets manager (HashiCorp Vault, AWS Secrets Manager, etc.) for production.
+8. **Dependency Pinning** — `requirements.txt` uses unpinned package names. Pin all versions in `requirements.lock` and periodically audit for CVEs.
+
+---
+
+**Report Status:** Complete (Pass 1 + Pass 2)  
 **Generated By:** Claude Architectural Review  

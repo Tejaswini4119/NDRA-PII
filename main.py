@@ -1,8 +1,8 @@
 
-from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import shutil
+import asyncio
 import os
 import uuid
 from typing import List, Optional
@@ -121,7 +121,7 @@ async def analyze_file_upload(file: UploadFile = File(...)):
                     )
                 buffer.write(chunk)
 
-        return _run_pipeline(file_location, file.filename, trace_id)
+        return await asyncio.to_thread(_run_pipeline, file_location, file.filename, trace_id)
 
     except HTTPException:
         raise
@@ -158,7 +158,7 @@ async def analyze_local_path(file_path: str):
         raise HTTPException(status_code=404, detail="File not found")
 
     trace_id = str(uuid.uuid4())
-    return _run_pipeline(resolved, os.path.basename(resolved), trace_id)
+    return await asyncio.to_thread(_run_pipeline, resolved, os.path.basename(resolved), trace_id)
 
 def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResult:
     """Helper to run Extractor -> Classifier -> Fusion -> Policy -> Redaction pipeline."""

@@ -1,6 +1,5 @@
 import sys
 import os
-import requests
 import json
 from config.settings import settings
 

@@ -122,10 +122,17 @@ class PolicyAgent:
         """
         Checks if a detected entity matches the rule conditions.
         ALL conditions must match (AND logic).
+
+        Only PII_MATCH conditions can be evaluated here because this method
+        operates at the entity level.  CONTEXT_MATCH conditions require
+        document-level context (e.g. total PII count, jurisdiction) that is
+        not available per-entity.  Such conditions are intentionally skipped
+        (treated as non-matching) so that escalation / jurisdiction rules do
+        NOT silently fire on every entity — they must be evaluated separately
+        at the document level before calling this method.
         """
         for cond in rule.conditions:
             if cond.type == "PII_MATCH":
-                
                 # Retrieve the value to check from the entity
                 val_to_check = None
                 if cond.field == "type":
@@ -135,23 +142,34 @@ class PolicyAgent:
                 elif cond.field == "value":
                     val_to_check = entity.text_value
                 else:
-                    # Unknown field
+                    # Unknown field — condition cannot be satisfied
                     return False
-                
+
                 # Check operator
                 if cond.operator == "EQUALS":
                     if val_to_check != cond.value:
                         return False
                 elif cond.operator == "GREATER_THAN":
                     if not (isinstance(val_to_check, (int, float)) and val_to_check > cond.value):
-                         return False
+                        return False
                 elif cond.operator == "LESS_THAN_OR_EQUALS":
-                     if not (isinstance(val_to_check, (int, float)) and val_to_check <= cond.value):
-                         return False
+                    if not (isinstance(val_to_check, (int, float)) and val_to_check <= cond.value):
+                        return False
                 elif cond.operator == "IN_LIST":
-                     if val_to_check not in cond.value:
-                         return False
+                    if val_to_check not in cond.value:
+                        return False
                 else:
+                    # Unknown operator — condition cannot be satisfied
                     return False
-        
+
+            elif cond.type == "CONTEXT_MATCH":
+                # CONTEXT_MATCH requires document-level evaluation (not per-entity).
+                # Return False so this rule does not fire at the entity level.
+                # Document-level escalation rules should be evaluated separately.
+                return False
+
+            else:
+                # Unknown condition type — treat as non-matching to be safe
+                return False
+
         return True

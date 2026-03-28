@@ -236,16 +236,20 @@ class ExtractorAgent(NDRAAgent):
         import email
         with open(path, "rb") as f:
             msg = email.message_from_binary_file(f)
-        
+
         body = ""
         if msg.is_multipart():
             for part in msg.walk():
                 content_type = part.get_content_type()
                 if content_type == "text/plain":
-                    body += part.get_payload(decode=True).decode()
+                    raw = part.get_payload(decode=True)
+                    if raw is not None:
+                        body += raw.decode(errors="replace")
         else:
-            body = msg.get_payload(decode=True).decode()
-            
+            raw = msg.get_payload(decode=True)
+            if raw is not None:
+                body = raw.decode(errors="replace")
+
         full_text = f"Subject: {msg['subject']}\nFrom: {msg['from']}\nTo: {msg['to']}\n\n{body}"
         return [{"text": full_text, "page": 1}]
 
