@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     build: .
@@ -10,10 +8,18 @@ services:
       - ./uploads:/app/uploads
       - ./output:/app/output
       - ./quarantine:/app/quarantine
-      - audit_logs:/app/audit.log
+      - ./artifacts:/app/artifacts
+      - ./audit:/app/audit
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - AUDIT_LOG_FILE=/app/audit/audit.log
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8001/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   prometheus:
     image: prom/prometheus:latest
@@ -25,6 +31,12 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   grafana:
     image: grafana/grafana:latest
@@ -33,9 +45,7 @@ services:
       - "3000:3000"
     restart: unless-stopped
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
-
-volumes:
-  audit_logs:

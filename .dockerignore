@@ -1,0 +1,39 @@
+# VCS
+.git
+.gitignore
+
+# Python caches / envs
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Local runtime/generated data
+uploads/
+output/
+quarantine/
+artifacts/
+audit/
+*.log
+
+# Test/dev artifacts
+tests/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Legacy/prototype and docs not required in runtime image
+ndra-old/
+devdocs/
+reports/
+toolscripts/
+datasets/
+
+# OS/editor
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

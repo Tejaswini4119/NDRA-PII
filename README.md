@@ -69,7 +69,51 @@ Start the server:
 ```bash
 python main.py
 ```
-POST to `http://localhost:8000/analyze/upload`.
+POST to `http://localhost:8001/analyze/upload`.
+
+## Containerized Deployment (Phase 7 - Stage 1)
+
+### Prerequisites
+- Docker Desktop (or Docker Engine + Compose plugin)
+- Ports available: `8001`, `9090`, `3000`
+
+### One-Time Setup
+```bash
+cp .env.example .env
+```
+
+PowerShell:
+```powershell
+Copy-Item .env.example .env
+```
+
+### Build and Run
+```bash
+docker compose build api
+docker compose up -d
+```
+
+### Validate Services
+```bash
+docker compose ps
+```
+
+- API health: `http://localhost:8001/`
+- API metrics: `http://localhost:8001/metrics`
+- Prometheus: `http://localhost:9090/targets`
+- Grafana: `http://localhost:3000/`
+
+### Runtime Volumes
+- `./uploads` -> `/app/uploads`
+- `./output` -> `/app/output`
+- `./quarantine` -> `/app/quarantine`
+- `./artifacts` -> `/app/artifacts`
+- `./audit` -> `/app/audit`
+
+### Stop Stack
+```bash
+docker compose down
+```
 
 ## Policy Configuration (NSRL)
 Policies are defined in `nsrl/rules/`. Example Rule:

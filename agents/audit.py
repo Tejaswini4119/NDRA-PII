@@ -1,6 +1,7 @@
 
 import json
 import hashlib
+import os
 from datetime import datetime
 from typing import Any, Dict
 from agents.base import NDRAAgent
@@ -10,9 +11,12 @@ class AuditAgent(NDRAAgent):
     Responsible for immutable, tamper-evident logging of all system decisions.
     Phase 1: Basic JSONL logging with SHA-256 chaining.
     """
-    def __init__(self, log_file: str = "audit.log"):
+    def __init__(self, log_file: str = None):
         super().__init__("AuditAgent")
-        self.log_file = log_file
+        self.log_file = log_file or os.getenv("AUDIT_LOG_FILE", "audit.log")
+        log_parent = os.path.dirname(self.log_file)
+        if log_parent:
+            os.makedirs(log_parent, exist_ok=True)
         self.last_hash = "0" * 64  # Genesis hash
 
     def process(self, input_data: Dict[str, Any], context: Dict[str, Any] = None) -> Dict[str, Any]:
