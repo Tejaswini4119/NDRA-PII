@@ -152,9 +152,11 @@ class ExtractorAgent(NDRAAgent):
     # --- Quarantine ---
     def _quarantine_file(self, original_path: Path, reason: str):
         self.logger.warning(f"Quarantining {original_path.name}: {reason}")
-        # In real system, move file. Here just log logic.
         dest = self.quarantine_dir / f"{original_path.name}_{uuid.uuid4().hex[:6]}"
-        # shutil.copy(original_path, dest) # Uncomment to actually copy
+        try:
+            shutil.copy2(original_path, dest)
+        except Exception as copy_err:
+            self.logger.error(f"Failed to copy file to quarantine: {copy_err}")
         self.log_event("FILE_QUARANTINED", {"file": original_path.name, "reason": reason})
 
     # --- Handlers ---
@@ -257,19 +259,38 @@ class ExtractorAgent(NDRAAgent):
         """Extracts archives to a temporary directory and recursively processes their contents."""
         self.logger.info(f"Extracting archive: {path.name}")
         all_chunks = []
-        
+
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
-                temp_path = Path(temp_dir)
-                
+                temp_path = Path(temp_dir).resolve()
+
                 if mime_type == "application/zip":
                     with zipfile.ZipFile(path, 'r') as z:
+                        # Zip Slip protection: reject any member whose resolved path
+                        # escapes the extraction directory.
+                        for member in z.namelist():
+                            member_path = (temp_path / member).resolve()
+                            if not str(member_path).startswith(str(temp_path)):
+                                self.logger.warning(
+                                    f"Zip Slip attempt blocked: '{member}' in {path.name}"
+                                )
+                                self._quarantine_file(path, f"Zip Slip attempt: {member}")
+                                return []
                         z.extractall(temp_path)
                 elif mime_type in ["application/x-tar", "application/gzip"]:
                     mode = 'r:gz' if mime_type == "application/gzip" else 'r'
                     with tarfile.open(path, mode) as t:
+                        # Tar Slip protection: reject absolute paths or traversals.
+                        for member in t.getmembers():
+                            member_path = (temp_path / member.name).resolve()
+                            if not str(member_path).startswith(str(temp_path)):
+                                self.logger.warning(
+                                    f"Tar Slip attempt blocked: '{member.name}' in {path.name}"
+                                )
+                                self._quarantine_file(path, f"Tar Slip attempt: {member.name}")
+                                return []
                         t.extractall(temp_path)
-                        
+
                 # Recursively process all files inside the temporary directory
                 for root, _, files in os.walk(temp_path):
                     for file_name in files:
@@ -284,11 +305,11 @@ class ExtractorAgent(NDRAAgent):
                             except Exception as e:
                                 self.logger.error(f"Error processing extracted file {file_name}: {e}")
                                 # Continue processing other files
-                                
+
         except Exception as e:
             self.logger.error(f"Failed to process archive {path.name}: {e}")
             self._quarantine_file(path, f"Archive Extraction Error: {str(e)}")
-            
+
         self.log_event("ARCHIVE_EXTRACTION_COMPLETE", {
             "file": path.name,
             "chunks_yielded": len(all_chunks)

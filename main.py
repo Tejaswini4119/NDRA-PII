@@ -11,8 +11,6 @@ from prometheus_client import make_asgi_app, Counter
 
 # Core Agents
 from agents.audit import AuditAgent
-# Core Agents
-from agents.audit import AuditAgent
 from agents.extractor import ExtractorAgent
 from agents.classifier import ClassifierAgent
 from agents.fusion_agent import FusionAgent
@@ -34,12 +32,12 @@ app = FastAPI(
     description="Neuro-Semantic Distributed Risk Analysis for Personally Identifiable Information (NDRA-PII)"
 )
 
-# Enable CORS
+# Enable CORS — origins are controlled via settings (never use "*" in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # --- Prometheus Metrics ---
@@ -89,17 +87,44 @@ async def analyze_file_upload(file: UploadFile = File(...)):
     """
     trace_id = str(uuid.uuid4())
     audit_agent.log_event("UPLOAD_RECEIVED", {"filename": file.filename, "trace_id": trace_id})
-    
+
+    # --- Input validation ---
+    # 1. MIME-type whitelist
+    content_type = file.content_type or ""
+    if settings.ALLOWED_UPLOAD_MIMES and content_type not in settings.ALLOWED_UPLOAD_MIMES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type: '{content_type}'. Allowed: {settings.ALLOWED_UPLOAD_MIMES}"
+        )
+
     # 1. Save File Locally
     try:
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-        file_location = f"{settings.UPLOAD_DIR}/{trace_id}_{file.filename}"
-        
+        # Use a safe filename derived only from the trace_id to avoid path traversal
+        safe_name = os.path.basename(file.filename or "upload")
+        file_location = os.path.join(settings.UPLOAD_DIR, f"{trace_id}_{safe_name}")
+
+        # 2. Stream to disk while enforcing size limit
+        bytes_written = 0
         with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
+            while True:
+                chunk = await file.read(65536)  # 64 KiB read chunks
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > settings.MAX_UPLOAD_BYTES:
+                    buffer.close()
+                    os.remove(file_location)
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_BYTES} bytes."
+                    )
+                buffer.write(chunk)
+
         return _run_pipeline(file_location, file.filename, trace_id)
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         audit_agent.log_event("UPLOAD_FAILED", {"error": str(e)})
         raise HTTPException(status_code=500, detail=str(e))
@@ -107,13 +132,33 @@ async def analyze_file_upload(file: UploadFile = File(...)):
 @app.post("/analyze/path", response_model=AnalysisResult)
 async def analyze_local_path(file_path: str):
     """
-    Analyze a file already on the server/local disk (Test Case Use).
+    Analyze a file already on the server/local disk.
+    Only permitted when ALLOWED_PATH_PREFIXES is configured and the requested
+    path falls within one of those prefixes.  The endpoint is disabled by
+    default (empty ALLOWED_PATH_PREFIXES) to prevent arbitrary file-read.
     """
-    if not os.path.exists(file_path):
+    # Disabled when no prefixes are configured
+    if not settings.ALLOWED_PATH_PREFIXES:
+        raise HTTPException(
+            status_code=403,
+            detail="The /analyze/path endpoint is disabled in this deployment."
+        )
+
+    # Resolve to an absolute, canonical path to defeat path-traversal attempts
+    resolved = os.path.realpath(os.path.abspath(file_path))
+
+    # Verify the path is within one of the allowed prefixes
+    if not any(resolved.startswith(os.path.realpath(prefix)) for prefix in settings.ALLOWED_PATH_PREFIXES):
+        raise HTTPException(
+            status_code=403,
+            detail="Access to the requested path is not permitted."
+        )
+
+    if not os.path.exists(resolved):
         raise HTTPException(status_code=404, detail="File not found")
-        
+
     trace_id = str(uuid.uuid4())
-    return _run_pipeline(file_path, os.path.basename(file_path), trace_id)
+    return _run_pipeline(resolved, os.path.basename(resolved), trace_id)
 
 def _run_pipeline(file_path: str, filename: str, trace_id: str) -> AnalysisResult:
     """Helper to run Extractor -> Classifier -> Fusion -> Policy -> Redaction pipeline."""

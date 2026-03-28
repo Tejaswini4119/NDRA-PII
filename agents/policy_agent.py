@@ -43,7 +43,7 @@ class PolicyAgent:
         
         # Sort rules by priority (descending)
         self.rules.sort(key=lambda x: x.meta.priority, reverse=True)
-        print(f"[PolicyAgent] Loaded {loaded_count} rules from {self.rules_dir}")
+        logger.info(f"[PolicyAgent] Loaded {loaded_count} rules from {self.rules_dir}")
 
     def evaluate_chunk(self, chunk: ClassifiedChunk, trace_id: str = "unknown") -> GovernedChunk:
         """
