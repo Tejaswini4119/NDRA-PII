@@ -17,3 +17,31 @@ pillow
 regex
 reportlab
 prometheus-client
+
+# ========================================
+# NDRA-PII v2 Architecture Dependencies
+# ========================================
+
+# Transformer NER (Phase 3)
+transformers>=4.36.0
+torch>=2.1.0
+sentencepiece>=0.1.99
+
+# Unicode & Adversarial Normalization (Phase 2)
+unicodedata2>=15.1.0
+confusable-homoglyphs>=3.2.0
+
+# Validation & Checksums (Phase 1 & 3)
+python-stdnum>=1.19
+email-validator>=2.1.0
+
+# Testing & Benchmarking
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+hypothesis>=6.92.0
+
+# Development
+black>=23.0.0
+mypy>=1.7.0
+ruff>=0.1.0
