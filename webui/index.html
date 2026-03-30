@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NDRA-PII Web UI</title>
+  <style>
+    :root {
+      --bg-0: #0b0f14;
+      --bg-1: #121821;
+      --bg-2: #18212d;
+      --card: rgba(20, 28, 38, 0.88);
+      --card-soft: rgba(24, 33, 45, 0.72);
+      --ink: #e8edf3;
+      --muted: #9eacbb;
+      --accent: #38d39f;
+      --accent-2: #4cb7ff;
+      --line: rgba(166, 183, 204, 0.18);
+      --danger: #ff6f7d;
+      --ok: #85f5c8;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 540px at -15% -10%, rgba(56, 211, 159, 0.14), transparent 48%),
+        radial-gradient(700px 480px at 110% 8%, rgba(76, 183, 255, 0.16), transparent 46%),
+        linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-2) 100%);
+      color: var(--ink);
+      font-family: "Sora", "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+
+    .shell {
+      max-width: 1080px;
+      margin: 22px auto 28px;
+      padding: 0 14px;
+      animation: fade-in 0.35s ease-out;
+    }
+
+    .top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Space Grotesk", "Sora", sans-serif;
+      font-weight: 600;
+      font-size: clamp(1.25rem, 3vw, 2rem);
+      letter-spacing: 0.015em;
+    }
+
+    .tag {
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: rgba(14, 20, 28, 0.62);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(8px);
+    }
+
+    form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 170px;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+    }
+
+    input[type="file"],
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(11, 16, 22, 0.8);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font: inherit;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input[type="file"]::file-selector-button {
+      border: 0;
+      margin-right: 10px;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: rgba(76, 183, 255, 0.14);
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.84rem;
+    }
+
+    input[type="file"]:focus,
+    input[type="text"]:focus {
+      border-color: rgba(76, 183, 255, 0.58);
+      box-shadow: 0 0 0 3px rgba(76, 183, 255, 0.16);
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(130deg, var(--accent), var(--accent-2));
+      color: #0b1016;
+      align-self: end;
+      min-width: 140px;
+      transition: transform 0.16s ease, filter 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    button[disabled] {
+      opacity: 0.7;
+      cursor: default;
+      transform: none;
+    }
+
+    .muted { color: var(--muted); }
+    .danger { color: var(--danger); }
+
+    .sub {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.91rem;
+    }
+
+    .controls {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(15, 21, 30, 0.66);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(11, 16, 22, 0.8);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font: inherit;
+      outline: none;
+    }
+
+    .checkline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      user-select: none;
+    }
+
+    .pipeline-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 7px;
+    }
+
+    .pipeline-item {
+      display: grid;
+      grid-template-columns: 130px 1fr 68px;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.83rem;
+    }
+
+    .pipeline-name {
+      color: #c6d3e0;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.72rem;
+    }
+
+    .pipeline-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(16, 23, 32, 0.9);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .pipeline-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .pipeline-ms {
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .kpi > div {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card-soft);
+      padding: 10px;
+    }
+
+    .kpi .name { font-size: 0.75rem; color: var(--muted); }
+    .kpi .value { font-size: 1.06rem; font-weight: 640; margin-top: 2px; }
+
+    .status {
+      margin-top: 8px;
+      min-height: 20px;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card-soft);
+      padding: 10px;
+      min-height: 120px;
+    }
+
+    .panel h3 {
+      margin: 0 0 8px;
+      font-family: "Space Grotesk", "Sora", sans-serif;
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: #dce5ee;
+    }
+
+    .kv {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 6px;
+      font-size: 0.88rem;
+    }
+
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.92rem;
+      table-layout: fixed;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(13, 19, 26, 0.8);
+    }
+
+    .mono {
+      font-family: "IBM Plex Mono", "JetBrains Mono", monospace;
+      letter-spacing: 0.01em;
+    }
+
+    .doc-view {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(10, 14, 20, 0.86);
+      overflow: hidden;
+    }
+
+    .doc-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 11px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(22, 31, 43, 0.72);
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .doc-scroll {
+      max-height: 340px;
+      overflow: auto;
+      padding: 11px;
+    }
+
+    .doc-text {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "IBM Plex Mono", "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #d6e0eb;
+    }
+
+    .obs {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(9, 13, 19, 0.78);
+      padding: 10px;
+    }
+
+    .obs-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .obs-head h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-family: "Space Grotesk", "Sora", sans-serif;
+    }
+
+    .obs-tools {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-ghost {
+      border: 1px solid var(--line);
+      background: rgba(19, 27, 37, 0.82);
+      color: #dbe6f2;
+      border-radius: 9px;
+      padding: 7px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .obs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .chart-card {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(14, 19, 28, 0.9);
+      padding: 9px;
+    }
+
+    .chart-title {
+      margin: 0 0 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    canvas {
+      width: 100%;
+      height: 130px;
+      display: block;
+      border-radius: 8px;
+      background: rgba(8, 12, 18, 0.88);
+      border: 1px solid rgba(166, 183, 204, 0.12);
+    }
+
+
+    @media (max-width: 760px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .obs-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .kv {
+        grid-template-columns: 1fr;
+      }
+
+      .tag { display: none; }
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="top">
+      <h1>NDRA-PII Analyzer</h1>
+      <div class="tag">Lean UI / Native Fetch</div>
+    </div>
+
+    <section class="card">
+      <p class="sub">Upload a document, run detection and redaction policy, inspect risk and trace data instantly.</p>
+
+      <form id="analyze-form">
+        <div>
+          <label for="file">File</label>
+          <input id="file" name="file" type="file" required>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="api-key">API Key (optional)</label>
+            <input id="api-key" type="text" placeholder="X-API-Key header value">
+          </div>
+
+          <div>
+            <label for="api-base">API Base URL</label>
+            <input id="api-base" type="text" value="" placeholder="defaults to current origin">
+          </div>
+
+          <button id="submit-btn" type="submit">Analyze</button>
+        </div>
+
+        <section class="controls">
+          <div class="controls-grid">
+            <div>
+              <label for="redact-mode">Redaction Mode</label>
+              <select id="redact-mode">
+                <option value="policy" selected>Policy driven</option>
+                <option value="selected_types">Selected entity types only</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="mask-style">Mask Style</label>
+              <select id="mask-style">
+                <option value="entity" selected>Entity label [TYPE]</option>
+                <option value="fixed">Fixed token [REDACTED]</option>
+                <option value="block">Block symbols ####</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="findings-limit">Findings Limit</label>
+              <input id="findings-limit" type="number" min="1" max="500" value="100">
+            </div>
+          </div>
+
+          <div class="controls-grid">
+            <div>
+              <label for="redact-types">Entity Types (comma-separated)</label>
+              <input id="redact-types" type="text" placeholder="EMAIL_ADDRESS, PHONE_NUMBER, US_SSN">
+            </div>
+
+            <div>
+              <label>&nbsp;</label>
+              <label class="checkline">
+                <input id="show-only-redacted" type="checkbox">
+                Show only redacted findings
+              </label>
+            </div>
+          </div>
+        </section>
+      </form>
+
+      <div id="status" class="status muted">Ready</div>
+
+      <div class="kpi" id="kpi" hidden>
+        <div><div class="name">Status</div><div class="value" id="k-status">-</div></div>
+        <div><div class="name">PII Detected</div><div class="value" id="k-pii">0</div></div>
+        <div><div class="name">Chunks</div><div class="value" id="k-chunks">0</div></div>
+        <div><div class="name">Latency</div><div class="value" id="k-latency">0 ms</div></div>
+      </div>
+
+      <div id="risk-wrap" hidden>
+        <div class="grid">
+          <article class="panel">
+            <h3>Document Risk</h3>
+            <dl class="kv">
+              <dt>Escalated</dt><dd id="risk-escalated">-</dd>
+              <dt>Severity</dt><dd id="risk-severity">-</dd>
+              <dt>Score</dt><dd id="risk-score">-</dd>
+              <dt>Rules</dt><dd id="risk-rules">none</dd>
+            </dl>
+          </article>
+
+          <article class="panel">
+            <h3>Trace</h3>
+            <dl class="kv">
+              <dt>Trace ID</dt><dd class="mono" id="trace-id">-</dd>
+              <dt>Decisions</dt><dd id="trace-decisions">0</dd>
+              <dt>Filename</dt><dd id="trace-file">-</dd>
+              <dt>Mode</dt><dd id="trace-mode">policy</dd>
+              <dt>Mask</dt><dd id="trace-mask">entity</dd>
+            </dl>
+          </article>
+        </div>
+      </div>
+
+      <div class="panel" id="pipeline-wrap" hidden>
+        <h3>Pipeline Viewer</h3>
+        <ul id="pipeline-list" class="pipeline-list"></ul>
+      </div>
+
+      <div id="table-wrap" hidden>
+        <h3>PII Findings (top 100)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 18%;">Type</th>
+              <th style="width: 36%;">Preview</th>
+              <th style="width: 12%;">Score</th>
+              <th style="width: 34%;">Location</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <section id="doc-wrap" class="doc-view" hidden>
+        <div class="doc-head">
+          <span>Redacted Document Viewport</span>
+          <span id="doc-meta">0 chars</span>
+        </div>
+        <div class="doc-scroll">
+          <pre id="doc-text" class="doc-text"></pre>
+        </div>
+      </section>
+
+      <section class="obs" id="obs-wrap">
+        <div class="obs-head">
+          <h3>Observability</h3>
+          <div class="obs-tools">
+            <button id="obs-refresh" class="btn-ghost" type="button">Refresh Metrics</button>
+            <a id="prom-link" class="btn-ghost" href="http://127.0.0.1:9090" target="_blank" rel="noreferrer">Open Prometheus</a>
+          </div>
+        </div>
+
+        <div class="obs-grid">
+          <article class="chart-card">
+            <p class="chart-title">Files Processed (last 60m)</p>
+            <canvas id="chart-files" width="520" height="130"></canvas>
+          </article>
+
+          <article class="chart-card">
+            <p class="chart-title">Policy Actions by Type (last 60m)</p>
+            <canvas id="chart-actions" width="520" height="130"></canvas>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById("analyze-form");
+      const fileInput = document.getElementById("file");
+      const apiKeyInput = document.getElementById("api-key");
+      const apiBaseInput = document.getElementById("api-base");
+      const submitBtn = document.getElementById("submit-btn");
+      const statusEl = document.getElementById("status");
+      const redactModeInput = document.getElementById("redact-mode");
+      const maskStyleInput = document.getElementById("mask-style");
+      const findingsLimitInput = document.getElementById("findings-limit");
+      const redactTypesInput = document.getElementById("redact-types");
+      const showOnlyRedactedInput = document.getElementById("show-only-redacted");
+
+      const kpi = document.getElementById("kpi");
+      const kStatus = document.getElementById("k-status");
+      const kPii = document.getElementById("k-pii");
+      const kChunks = document.getElementById("k-chunks");
+      const kLatency = document.getElementById("k-latency");
+
+      const riskWrap = document.getElementById("risk-wrap");
+      const riskEscalated = document.getElementById("risk-escalated");
+      const riskSeverity = document.getElementById("risk-severity");
+      const riskScore = document.getElementById("risk-score");
+      const riskRules = document.getElementById("risk-rules");
+
+      const traceId = document.getElementById("trace-id");
+      const traceDecisions = document.getElementById("trace-decisions");
+      const traceFile = document.getElementById("trace-file");
+      const traceMode = document.getElementById("trace-mode");
+      const traceMask = document.getElementById("trace-mask");
+
+      const pipelineWrap = document.getElementById("pipeline-wrap");
+      const pipelineList = document.getElementById("pipeline-list");
+
+      const tableWrap = document.getElementById("table-wrap");
+      const rows = document.getElementById("rows");
+
+      const docWrap = document.getElementById("doc-wrap");
+      const docText = document.getElementById("doc-text");
+      const docMeta = document.getElementById("doc-meta");
+
+      const obsRefreshBtn = document.getElementById("obs-refresh");
+      const promLink = document.getElementById("prom-link");
+
+      const filesChart = document.getElementById("chart-files");
+      const actionsChart = document.getElementById("chart-actions");
+
+      let obsConfig = {
+        prometheus_base_url: "http://127.0.0.1:9090",
+      };
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg;
+        statusEl.className = "status " + (isError ? "danger" : "muted");
+      }
+
+      function clearResults() {
+        kpi.hidden = true;
+        riskWrap.hidden = true;
+        tableWrap.hidden = true;
+        rows.textContent = "";
+        docWrap.hidden = true;
+        docText.textContent = "";
+        docMeta.textContent = "0 chars";
+        pipelineWrap.hidden = true;
+        pipelineList.textContent = "";
+      }
+
+      function endpointBase() {
+        const custom = apiBaseInput.value.trim();
+        return custom || window.location.origin;
+      }
+
+      function renderPipeline(steps) {
+        if (!Array.isArray(steps) || !steps.length) {
+          return;
+        }
+
+        pipelineWrap.hidden = false;
+        const maxMs = Math.max.apply(null, steps.map(function (s) {
+          return Number(s.elapsed_ms) || 1;
+        }));
+
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < steps.length; i += 1) {
+          const step = steps[i];
+          const ms = Number(step.elapsed_ms) || 0;
+          const pct = Math.max(6, Math.round((ms / maxMs) * 100));
+
+          const li = document.createElement("li");
+          li.className = "pipeline-item";
+
+          const name = document.createElement("div");
+          name.className = "pipeline-name";
+          name.textContent = step.name || "step";
+
+          const bar = document.createElement("div");
+          bar.className = "pipeline-bar";
+          const fill = document.createElement("div");
+          fill.className = "pipeline-fill";
+          fill.style.width = String(pct) + "%";
+          bar.appendChild(fill);
+
+          const val = document.createElement("div");
+          val.className = "pipeline-ms mono";
+          val.textContent = String(ms) + " ms";
+
+          li.appendChild(name);
+          li.appendChild(bar);
+          li.appendChild(val);
+          frag.appendChild(li);
+        }
+
+        pipelineList.appendChild(frag);
+      }
+
+      function drawSeries(canvasEl, points, lineColor) {
+        const ctx = canvasEl.getContext("2d");
+        const w = canvasEl.width;
+        const h = canvasEl.height;
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.strokeStyle = "rgba(180, 198, 219, 0.18)";
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 4; i += 1) {
+          const y = Math.round((h / 5) * i);
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+
+        if (!points.length) {
+          ctx.fillStyle = "rgba(158, 172, 187, 0.7)";
+          ctx.font = "12px IBM Plex Mono";
+          ctx.fillText("No data", 10, 20);
+          return;
+        }
+
+        let max = 0;
+        for (let i = 0; i < points.length; i += 1) {
+          if (points[i] > max) max = points[i];
+        }
+        max = max || 1;
+
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < points.length; i += 1) {
+          const x = (i / Math.max(points.length - 1, 1)) * (w - 1);
+          const y = h - (points[i] / max) * (h - 8) - 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      async function fetchPromRange(query) {
+        const now = Math.floor(Date.now() / 1000);
+        const start = now - 3600;
+        const url = "/ops/prometheus/query_range?query=" + encodeURIComponent(query) +
+          "&start=" + String(start) +
+          "&end=" + String(now) +
+          "&step=60s";
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("prometheus range query failed");
+        return res.json();
+      }
+
+      function seriesFromPromData(data) {
+        const result = data && data.data && Array.isArray(data.data.result) ? data.data.result : [];
+        if (!result.length || !Array.isArray(result[0].values)) return [];
+        const values = result[0].values;
+        const out = [];
+        for (let i = 0; i < values.length; i += 1) {
+          const v = Number(values[i][1]);
+          out.push(Number.isFinite(v) ? v : 0);
+        }
+        return out;
+      }
+
+      async function refreshObservability() {
+        try {
+          const [filesData, actionsData] = await Promise.all([
+            fetchPromRange("sum(rate(ndrapii_files_processed_total[5m]))"),
+            fetchPromRange("sum(rate(ndrapii_policy_actions_total[5m]))"),
+          ]);
+
+          drawSeries(filesChart, seriesFromPromData(filesData), "#4cb7ff");
+          drawSeries(actionsChart, seriesFromPromData(actionsData), "#38d39f");
+        } catch (e) {
+          drawSeries(filesChart, [], "#4cb7ff");
+          drawSeries(actionsChart, [], "#38d39f");
+        }
+      }
+
+      async function initObservability() {
+        try {
+          const res = await fetch("/ops/config");
+          if (res.ok) {
+            const cfg = await res.json();
+            obsConfig.prometheus_base_url = cfg.prometheus_base_url || obsConfig.prometheus_base_url;
+          }
+        } catch (e) {
+          // Keep defaults.
+        }
+
+        promLink.href = obsConfig.prometheus_base_url;
+        refreshObservability();
+      }
+
+      function renderResult(data, elapsedMs) {
+        kpi.hidden = false;
+        kStatus.textContent = data.status || "-";
+        kPii.textContent = String(data.pii_detected_count || 0);
+        kChunks.textContent = String(data.chunks_count || 0);
+        kLatency.textContent = String(elapsedMs) + " ms";
+
+        if (data.document_risk) {
+          riskWrap.hidden = false;
+          const r = data.document_risk;
+          riskEscalated.textContent = r.escalated ? "yes" : "no";
+          riskEscalated.style.color = r.escalated ? "var(--danger)" : "var(--ok)";
+          riskSeverity.textContent = r.severity || "NONE";
+          riskScore.textContent = String(r.risk_score ?? 0);
+          riskRules.textContent = (r.rules_fired || []).join(", ") || "none";
+        }
+
+        traceId.textContent = data.trace_id || "-";
+        traceDecisions.textContent = String((data.policy_decisions || []).length);
+        traceFile.textContent = data.filename || "-";
+        traceMode.textContent = (data.redaction_options && data.redaction_options.mode) || "policy";
+        traceMask.textContent = (data.redaction_options && data.redaction_options.mask_style) || "entity";
+        riskWrap.hidden = false;
+        renderPipeline(data.pipeline_steps || []);
+
+        if (typeof data.redacted_document_text === "string") {
+          docText.textContent = data.redacted_document_text;
+          docMeta.textContent = String(data.redacted_document_text.length) + " chars";
+          docWrap.hidden = false;
+        }
+
+        const pii = Array.isArray(data.pii_details) ? data.pii_details.slice(0, 100) : [];
+        if (!pii.length) return;
+
+        tableWrap.hidden = false;
+        const frag = document.createDocumentFragment();
+
+        for (let i = 0; i < pii.length; i += 1) {
+          const item = pii[i];
+          const tr = document.createElement("tr");
+
+          const typeTd = document.createElement("td");
+          typeTd.textContent = item.entity_type || "-";
+
+          const previewTd = document.createElement("td");
+          previewTd.textContent = item.text_preview || "";
+
+          const scoreTd = document.createElement("td");
+          const score = Number(item.score);
+          scoreTd.textContent = Number.isFinite(score) ? score.toFixed(2) : "-";
+
+          const locTd = document.createElement("td");
+          locTd.textContent = item.location_str || "";
+
+          tr.appendChild(typeTd);
+          tr.appendChild(previewTd);
+          tr.appendChild(scoreTd);
+          tr.appendChild(locTd);
+          frag.appendChild(tr);
+        }
+
+        rows.appendChild(frag);
+      }
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        clearResults();
+
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          setStatus("Pick a file first", true);
+          return;
+        }
+
+        submitBtn.disabled = true;
+        setStatus("Uploading and analyzing...");
+
+        try {
+          const url = endpointBase().replace(/\/$/, "") + "/analyze/upload";
+          const headers = {};
+          if (apiKeyInput.value.trim()) {
+            headers["X-API-Key"] = apiKeyInput.value.trim();
+          }
+
+          const body = new FormData();
+          body.append("file", file);
+          body.append("redact_mode", redactModeInput.value);
+          body.append("redact_types", redactTypesInput.value.trim());
+          body.append("mask_style", maskStyleInput.value);
+          body.append("findings_limit", String(findingsLimitInput.value || "100"));
+          body.append("show_only_redacted", showOnlyRedactedInput.checked ? "true" : "false");
+
+          const t0 = performance.now();
+          const res = await fetch(url, { method: "POST", headers: headers, body: body });
+          const elapsedMs = Math.round(performance.now() - t0);
+
+          if (!res.ok) {
+            const err = await res.json().catch(function () { return {}; });
+            const detail = err && err.detail ? String(err.detail) : ("HTTP " + String(res.status));
+            setStatus("Request failed: " + detail, true);
+            return;
+          }
+
+          const data = await res.json();
+          renderResult(data, elapsedMs);
+          setStatus("Done");
+        } catch (e) {
+          setStatus("Network or server error: " + (e && e.message ? e.message : "unknown"), true);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      obsRefreshBtn.addEventListener("click", function () {
+        refreshObservability();
+      });
+
+      initObservability();
+    })();
+  </script>
+</body>
+</html>

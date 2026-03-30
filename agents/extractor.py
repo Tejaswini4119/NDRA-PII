@@ -30,17 +30,18 @@ except ImportError:
 # Internal
 from agents.base import NDRAAgent
 from schemas.core_models import DocumentMetadata, SemanticChunk, RawChunk
+from config.settings import settings
 
 class ExtractorAgent(NDRAAgent):
     """
     Phase 2 (Expanded): Multi-Model Ingestion & Feature Extraction.
-    Supports: 
+        Supports:
     - Docs: PDF, DOCX, PPTX
     - Data: TXT, CSV, JSON, XML, YAML, LOG, SQL
     - Web: HTML
-    - Email: EML, MSG
-    - Images: PNG, JPG (Metadata only for now, OCR stub)
-    - Archives: ZIP, TAR (Listing)
+        - Email: EML
+        - Optional experimental modes (disabled by default): MSG, image metadata,
+            and archive recursion.
     - Quarantine: Safe fallback for malformed/unsupported.
     """
     
@@ -48,6 +49,13 @@ class ExtractorAgent(NDRAAgent):
         super().__init__("ExtractorAgent")
         self.quarantine_dir = Path(quarantine_dir)
         self.quarantine_dir.mkdir(exist_ok=True)
+
+        # Freeze mode keeps the system on verified ingestion paths only.
+        self.freeze_mode = settings.FREEZE_WORKING_SYSTEM
+        self.experimental_ingestion = (
+            settings.ENABLE_EXPERIMENTAL_INGESTION and not self.freeze_mode
+        )
+        self.frozen_supported_mimes = set(settings.FROZEN_SUPPORTED_MIMES)
         
         # Dispatch Table (Mime/Ext -> Handler)
         self.handlers = {
@@ -71,15 +79,17 @@ class ExtractorAgent(NDRAAgent):
             "text/markdown": self._read_txt,
             "text/html": self._read_html,
             
-            # Image
-            "image/jpeg": self._read_image,
-            "image/png": self._read_image,
-            "image/webp": self._read_image,
-            
             # Email
             "message/rfc822": self._read_eml,
-            "application/vnd.ms-outlook": self._read_msg,
         }
+
+        if self.experimental_ingestion:
+            self.handlers.update({
+                "image/jpeg": self._read_image,
+                "image/png": self._read_image,
+                "image/webp": self._read_image,
+                "application/vnd.ms-outlook": self._read_msg,
+            })
         
         # Extensions fallback if mime guessing fails or is generic
         self.ext_map = {
@@ -89,15 +99,19 @@ class ExtractorAgent(NDRAAgent):
             ".yml": "text/yaml",
             ".yaml": "text/yaml",
             ".py": "text/plain",
-            ".msg": "application/vnd.ms-outlook",
             ".eml": "message/rfc822",
             ".json": "application/json",
             ".parquet": "application/octet-stream", # Needs specific handler
-            ".zip": "application/zip",
-            ".tar": "application/x-tar",
-            ".gz": "application/gzip",
-            ".tgz": "application/gzip"
         }
+
+        if self.experimental_ingestion:
+            self.ext_map.update({
+                ".msg": "application/vnd.ms-outlook",
+                ".zip": "application/zip",
+                ".tar": "application/x-tar",
+                ".gz": "application/gzip",
+                ".tgz": "application/gzip",
+            })
 
     def process(self, file_path: str, context: Dict[str, Any] = None) -> List[SemanticChunk]:
         path = Path(file_path)
@@ -107,6 +121,10 @@ class ExtractorAgent(NDRAAgent):
         # 1. Integrity & Type
         file_hash = self._compute_sha256(path)
         mime_type = self._detect_mime(path)
+
+        if self.freeze_mode and mime_type not in self.frozen_supported_mimes:
+            self._quarantine_file(path, f"Unsupported MIME type in frozen mode: {mime_type}")
+            return []
         
         doc_meta = DocumentMetadata(
             filename=path.name,
@@ -119,6 +137,9 @@ class ExtractorAgent(NDRAAgent):
 
         # 2. Process Archives Recursively
         if mime_type in ["application/zip", "application/x-tar", "application/gzip"]:
+            if not self.experimental_ingestion:
+                self._quarantine_file(path, "Archive ingestion disabled in frozen mode")
+                return []
             return self._process_archive(path, mime_type)
 
         # 3. Select Handler or Quarantine
@@ -222,11 +243,10 @@ class ExtractorAgent(NDRAAgent):
             return [{"text": soup.get_text(separator="\n"), "page": 1}]
 
     def _read_image(self, path: Path) -> List[Dict]:
-        # Phase 2 stub for OCR or metadata
+        # Experimental mode: metadata-only image handling.
         try:
             img = Image.open(path)
             meta_text = f"[IMAGE FILE: {path.name}]\nFormat: {img.format}\nSize: {img.size}\nMode: {img.mode}"
-            # TODO: Integrate PaddleOCR here if requested
             return [{"text": meta_text, "page": 1}]
         except Exception:
             return []
@@ -257,7 +277,7 @@ class ExtractorAgent(NDRAAgent):
         if extract_msg:
             msg = extract_msg.Message(path)
             return [{"text": msg.body, "page": 1}]
-        return [{"text": "[MSG Support Missing - Install extract-msg]", "page": 1}]
+        raise RuntimeError("MSG ingestion requires optional dependency 'extract-msg'.")
 
     def _process_archive(self, path: Path, mime_type: str) -> List[SemanticChunk]:
         """Extracts archives to a temporary directory and recursively processes their contents."""

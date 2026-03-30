@@ -16,6 +16,17 @@ NDRA-PII is an advanced multi-agent system designed to automatically **detect**,
 - **NSRL Policy Engine**: Configurable YAML-based rules (e.g., "Redact US SSN if High Severity").
 - **Smart Redaction**: Re-flows documents to strictly mask sensitive data while preserving context.
 - **Audit Trails**: Full decision lineage for compliance (GDPR, HIPAA, PCI-DSS).
+- **Frozen Production Mode**: Defaults to verified end-to-end ingestion paths only, with experimental handlers disabled.
+
+## Frozen Runtime Defaults
+
+The system now defaults to a "working-set freeze" for predictable production behavior:
+
+- `FREEZE_WORKING_SYSTEM=true` (default)
+- `ENABLE_EXPERIMENTAL_INGESTION=false` (default)
+
+When frozen, NDRA accepts only verified MIME families and quarantines unsupported/experimental inputs.
+Experimental ingestion paths (archive recursion, image metadata-only handling, and MSG parsing) are opt-in and remain disabled unless explicitly enabled.
 
 ## Architecture
 
@@ -58,7 +69,7 @@ python -m spacy download en_core_web_lg
 The most interactive way to use NDRA-PII is the CLI:
 
 ```bash
-python ndrapiicli.py
+python -m ndra_stack.cli
 ```
 1.  Enter the path to your file (e.g., `datasets/Testing_Set.pdf`).
 2.  The system will process the file through all agents.
@@ -67,9 +78,16 @@ python ndrapiicli.py
 ### Usage (API)
 Start the server:
 ```bash
-python main.py
+python -m ndra_stack
 ```
 POST to `http://localhost:8001/analyze/upload`.
+
+## Packaged Layout
+
+- `ndra_stack/`: packaged entrypoints (`api.py`, `cli.py`, `__main__.py`)
+- `main.py`: legacy API module retained for backward compatibility
+- `ndrapiicli.py`: legacy CLI module retained for backward compatibility
+- `webui/`: static Web UI served at `/ui`
 
 ## Containerized Deployment (Phase 7 - Stage 1)
 
@@ -92,6 +110,32 @@ Copy-Item .env.example .env
 docker compose build api
 docker compose up -d
 ```
+
+## Single-Container Run (One `docker run`)
+
+The project can be run end-to-end in a single container (API + Web UI + internal Prometheus for native charts):
+
+```bash
+docker build -t ndra-stack:allinone .
+
+# If your build host has intermittent Docker DNS failures:
+docker build --network=host -t ndra-stack:allinone .
+
+docker run --rm -p 8001:8001 -p 9090:9090 \
+  -v "$PWD/uploads:/app/uploads" \
+  -v "$PWD/output:/app/output" \
+  -v "$PWD/quarantine:/app/quarantine" \
+  -v "$PWD/artifacts:/app/artifacts" \
+  -v "$PWD/audit:/app/audit" \
+  --name ndra-stack ndra-stack:allinone
+```
+
+Endpoints:
+
+- API: `http://localhost:8001/`
+- Web UI: `http://localhost:8001/ui`
+- Metrics: `http://localhost:8001/metrics`
+- Internal Prometheus: `http://localhost:9090/targets`
 
 ### Validate Services
 ```bash

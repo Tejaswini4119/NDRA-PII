@@ -61,6 +61,38 @@ class NDRAConfig(BaseSettings):
     # Set to 0 to disable rate limiting.
     RATE_LIMIT_PER_MINUTE: int = 60
 
+    # ------------------------------------------------------------------
+    # Production freeze controls
+    # ------------------------------------------------------------------
+    # When enabled (default), NDRA only accepts the verified ingestion formats
+    # listed in FROZEN_SUPPORTED_MIMES. This disables partial/experimental
+    # ingestion behavior and keeps end-to-end behavior deterministic.
+    FREEZE_WORKING_SYSTEM: bool = True
+
+    # Explicit allowlist used when FREEZE_WORKING_SYSTEM is enabled.
+    # Configure via JSON array env var if needed.
+    FROZEN_SUPPORTED_MIMES: List[str] = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/markdown",
+        "text/csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+        "application/json",
+        "application/xml",
+        "text/xml",
+        "application/x-yaml",
+        "text/yaml",
+        "text/html",
+        "message/rfc822",
+    ]
+
+    # Opt-in switch for image metadata ingestion, MSG parsing, and archive
+    # recursion. Ignored while FREEZE_WORKING_SYSTEM is True.
+    ENABLE_EXPERIMENTAL_INGESTION: bool = False
+
     class Config:
         env_file = ".env"
 

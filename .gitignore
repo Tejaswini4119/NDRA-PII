@@ -1,6 +1,29 @@
-.pip/
-__pycache__/
-*.pyc
 .env
+.pip/
+.venv/
+
+# Python cache/build artifacts
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+
+# Runtime/generated output
+uploads/
+output/
+quarantine/
+artifacts/
+audit/
+*.log
+
+# Test/tooling scratch
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

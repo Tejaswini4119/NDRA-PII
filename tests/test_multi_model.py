@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import pandas as pd
+from pathlib import Path
 
 sys.path.append(os.path.abspath("."))
 
@@ -13,11 +14,11 @@ def test_multi_model():
     agent = ExtractorAgent()
     
     # 1. Test Excel (Real User File)
-    xlsx_path = r"c:\Users\Kandukoori Tejaswini\NDRA-PII\NDRA\datasets\Testing_Set.xlsx"
-    if os.path.exists(xlsx_path):
+    xlsx_path = Path(__file__).resolve().parents[1] / "datasets" / "Testing_Set.xlsx"
+    if xlsx_path.exists():
         print(f"--- Processing Excel: {xlsx_path} ---")
         try:
-            chunks = agent.process(xlsx_path)
+            chunks = agent.process(str(xlsx_path))
             print(f"[OK] Extracted {len(chunks)} chunks from Excel.")
             if chunks:
                 print(f"Preview: {chunks[0].processed_text[:100]}...")

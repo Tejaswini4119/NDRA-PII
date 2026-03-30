@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from typing import Dict, List, Literal, Optional
 
@@ -14,7 +14,7 @@ class OrchestrationStepMetric(BaseModel):
 class PipelineContext(BaseModel):
     trace_id: str
     filename: str
-    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PipelineOutput(BaseModel):

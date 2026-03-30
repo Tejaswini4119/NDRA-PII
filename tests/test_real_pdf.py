@@ -1,5 +1,7 @@
 import sys
 import os
+from pathlib import Path
+import unittest
 
 # Add root to path
 sys.path.append(os.path.abspath("."))
@@ -7,17 +9,16 @@ sys.path.append(os.path.abspath("."))
 from agents.extractor import ExtractorAgent
 
 def test_real_doc():
-    pdf_path = r"c:\Users\Kandukoori Tejaswini\NDRA-PII\NDRA\datasets\Testing_Set.pdf"
+    pdf_path = Path(__file__).resolve().parents[1] / "datasets" / "Testing_Set.pdf"
     
-    if not os.path.exists(pdf_path):
-        print(f"[ERROR] '{pdf_path}' not found. Cannot run test.")
-        return
+    if not pdf_path.exists():
+        raise unittest.SkipTest("datasets/Testing_Set.pdf not found in workspace")
 
     print(f"Testing real document: {pdf_path}")
     
     agent = ExtractorAgent()
     try:
-        chunks = agent.process(pdf_path)
+        chunks = agent.process(str(pdf_path))
         
         print(f"\n[OK] Extracted {len(chunks)} chunks.")
         

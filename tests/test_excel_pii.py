@@ -1,6 +1,8 @@
 
 import sys
 import os
+from pathlib import Path
+import unittest
 
 sys.path.append(os.path.abspath("."))
 
@@ -10,14 +12,13 @@ from agents.classifier import ClassifierAgent
 def test_excel_detailed():
     print("Testing Detailed PII Detection on Excel...\n")
     
-    xlsx_path = r"c:\Users\Kandukoori Tejaswini\NDRA-PII\NDRA\datasets\Testing_Set.xlsx"
-    if not os.path.exists(xlsx_path):
-        print(f"[ERROR] {xlsx_path} not found.")
-        return
+    xlsx_path = Path(__file__).resolve().parents[1] / "datasets" / "Testing_Set.xlsx"
+    if not xlsx_path.exists():
+        raise unittest.SkipTest("datasets/Testing_Set.xlsx not found in workspace")
 
     # 1. Ingest
     extractor = ExtractorAgent()
-    chunks = extractor.process(xlsx_path)
+    chunks = extractor.process(str(xlsx_path))
     print(f"[OK] Ingested Excel: {len(chunks)} chunks.")
 
     # 2. Detect
