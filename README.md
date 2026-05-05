@@ -187,4 +187,6 @@ python -m unittest discover tests
 - **Tejaswini** - *Lead, Applied Intelligence & Data Semantics Engineer - NDRA Intelligence Systems*
 - **Pardhu Sree Rushi Varma** - *Core Architecture, Security & Governance Engineer - NDRA Governance Systems*
 - **Rupa Yeshvitha Karedla** -  *Dataset Management & Preprocessing Engineer - NDRA Data-Pipelines*
+- **Jeshwanth Kamutam** - *Data Collection Engineering & QA Testing Engineer - NDRA Data-Pipelines*
+- **Sathya Sai Kolusu** - *Technical Documentation Evangelist & Engineering Communications - Technical Communications*
 
